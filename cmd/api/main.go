@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"twistgram-api-go/internal/config"
+	"twistgram-api-go/internal/handler"
+	"twistgram-api-go/internal/middleware"
 	"twistgram-api-go/internal/model"
 	"twistgram-api-go/pkg/response"
 )
@@ -51,7 +53,7 @@ func main() {
 	// Setup Gin router
 	r := gin.Default()
 
-	// Health check endpoint
+	// Health check endpoint (public)
 	r.GET("/health", func(c *gin.Context) {
 		sqlDB, err := config.GetDB().DB()
 		dbStatus := "connected"
@@ -65,6 +67,20 @@ func main() {
 			"timestamp": time.Now().Format(time.RFC3339),
 		})
 	})
+
+	// API v1 routes
+	v1 := r.Group("/api/v1")
+
+	// Public routes (no auth required)
+	// (to be added in later phases)
+
+	// Protected routes (auth required)
+	userHandler := handler.NewUserHandler()
+	auth := v1.Group("")
+	auth.Use(middleware.AuthRequired())
+	{
+		auth.GET("/users/me", userHandler.GetMe)
+	}
 
 	// Start server
 	addr := ":" + cfg.Port
