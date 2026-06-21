@@ -18,20 +18,21 @@ type User struct {
 	EmailVerified  bool       `gorm:"default:false" json:"email_verified"`
 	Bio            *string    `gorm:"type:text;null" json:"bio,omitempty"`
 	AvatarURL      *string    `gorm:"type:varchar(500);null" json:"avatar_url,omitempty"`
+	ExternalLink   *string    `gorm:"type:varchar(500);null" json:"external_link,omitempty"`
 	IsPrivate      bool       `gorm:"default:false" json:"is_private"`
 	LastUsernameAt *time.Time `gorm:"null" json:"last_username_at,omitempty"` // SOC-05: 1x change per month
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 
 	// Relations
-	Posts             []Post             `gorm:"foreignKey:UserID" json:"posts,omitempty"`
-	Stories           []Story            `gorm:"foreignKey:UserID" json:"stories,omitempty"`
-	Comments          []Comment          `gorm:"foreignKey:UserID" json:"comments,omitempty"`
-	Notifications     []Notification     `gorm:"foreignKey:RecipientID" json:"notifications,omitempty"`
-	SentNotifications []Notification     `gorm:"foreignKey:ActorID" json:"sent_notifications,omitempty"`
+	Posts             []Post                    `gorm:"foreignKey:UserID" json:"posts,omitempty"`
+	Stories           []Story                   `gorm:"foreignKey:UserID" json:"stories,omitempty"`
+	Comments          []Comment                 `gorm:"foreignKey:UserID" json:"comments,omitempty"`
+	Notifications     []Notification            `gorm:"foreignKey:RecipientID" json:"notifications,omitempty"`
+	SentNotifications []Notification            `gorm:"foreignKey:ActorID" json:"sent_notifications,omitempty"`
 	Conversations     []ConversationParticipant `gorm:"foreignKey:UserID" json:"conversations,omitempty"`
-	Messages          []Message          `gorm:"foreignKey:SenderID" json:"messages,omitempty"`
-	Reports           []Report           `gorm:"foreignKey:ReporterID" json:"reports,omitempty"`
+	Messages          []Message                 `gorm:"foreignKey:SenderID" json:"messages,omitempty"`
+	Reports           []Report                  `gorm:"foreignKey:ReporterID" json:"reports,omitempty"`
 }
 
 func (User) TableName() string {

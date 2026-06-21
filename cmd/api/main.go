@@ -80,6 +80,9 @@ func main() {
 	auth.Use(middleware.AuthRequired())
 	{
 		auth.GET("/users/me", userHandler.GetMe)
+		auth.PATCH("/users/me", userHandler.UpdateMe)
+		auth.PATCH("/users/me/privacy", userHandler.UpdatePrivacy)
+		auth.GET("/users/:username", userHandler.GetByUsername)
 	}
 
 	// Start server
