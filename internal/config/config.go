@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -14,21 +13,26 @@ import (
 var DB *gorm.DB
 
 type Config struct {
-	DatabaseURL     string
-	SupabaseURL     string
+	AppEnv            string
+	Port              string
+	CORSAllowOrigins  string
+	DatabaseURL       string
+	SupabaseURL       string
+	SupabaseSecretKey string
 	SupabaseJWTSecret string
-	Port            string
 }
 
 func LoadConfig() *Config {
-	// Load .env file (ignore error if not found)
 	_ = godotenv.Load()
 
 	cfg := &Config{
+		AppEnv:            getEnv("APP_ENV", "development"),
+		Port:              getEnv("PORT", "8080"),
+		CORSAllowOrigins:  getEnv("CORS_ALLOW_ORIGINS", "*"),
 		DatabaseURL:       getEnv("DATABASE_URL", ""),
 		SupabaseURL:       getEnv("SUPABASE_URL", ""),
+		SupabaseSecretKey: getEnv("SUPABASE_SECRET_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
-		Port:              getEnv("PORT", "8080"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -39,14 +43,18 @@ func LoadConfig() *Config {
 }
 
 func InitDatabase(cfg *Config) *gorm.DB {
+	logMode := logger.Warn
+	if cfg.AppEnv == "development" {
+		logMode = logger.Info
+	}
+
 	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logMode),
 	})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Test connection
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)
@@ -70,9 +78,4 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-// GetDSN returns a formatted DSN for logging purposes (without password)
-func (c *Config) GetDSN() string {
-	return fmt.Sprintf("postgresql://%s@%s/%s", c.SupabaseURL, c.Port, "twistgram")
 }

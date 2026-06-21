@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"twistgram-api-go/internal/config"
+	"twistgram-api-go/internal/model"
 	"twistgram-api-go/pkg/response"
 )
 
@@ -15,7 +16,37 @@ func main() {
 
 	// Initialize database
 	db := config.InitDatabase(cfg)
-	_ = db // Will be used in later phases
+
+	// AutoMigrate all models
+	log.Println("Running database migration...")
+	err := db.AutoMigrate(
+		&model.User{},
+		&model.UserInterest{},
+		&model.Follow{},
+		&model.Block{},
+		&model.Post{},
+		&model.PostMedia{},
+		&model.PostTag{},
+		&model.Hashtag{},
+		&model.PostHashtag{},
+		&model.Like{},
+		&model.Comment{},
+		&model.SavedPost{},
+		&model.Story{},
+		&model.StoryView{},
+		&model.StoryTag{},
+		&model.Highlight{},
+		&model.HighlightStory{},
+		&model.Conversation{},
+		&model.ConversationParticipant{},
+		&model.Message{},
+		&model.Notification{},
+		&model.Report{},
+	)
+	if err != nil {
+		log.Fatalf("Failed to run migration: %v", err)
+	}
+	log.Println("Migration completed successfully")
 
 	// Setup Gin router
 	r := gin.Default()
