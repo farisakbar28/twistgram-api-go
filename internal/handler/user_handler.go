@@ -116,6 +116,8 @@ func (h *UserHandler) handleServiceResult(c *gin.Context, profile *dto.UserProfi
 		response.BadRequest(c, "Username already taken")
 	case errors.Is(err, service.ErrUsernameChangeLimited):
 		response.BadRequest(c, "Username can only be changed once per month")
+	case errors.Is(err, service.ErrUserBlocked):
+		response.ForbiddenCode(c, "USER_BLOCKED", "You cannot view this profile because a block exists between these users")
 	default:
 		response.InternalError(c, "Failed to process user request")
 	}

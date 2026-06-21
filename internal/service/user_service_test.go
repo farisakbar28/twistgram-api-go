@@ -50,6 +50,9 @@ func (f *fakeUserRepo) CountPosts(userID uuid.UUID) (int64, error)     { return 
 func (f *fakeUserRepo) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {
 	return false, nil
 }
+func (f *fakeUserRepo) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+	return false, nil
+}
 
 func TestUpdateProfileUsernameChangeLimited(t *testing.T) {
 	userID := uuid.New()

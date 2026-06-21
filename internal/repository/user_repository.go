@@ -17,6 +17,7 @@ type UserRepository interface {
 	CountFollowing(userID uuid.UUID) (int64, error)
 	CountPosts(userID uuid.UUID) (int64, error)
 	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
+	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
 }
 
 type GormUserRepository struct {
@@ -93,4 +94,15 @@ func (r *GormUserRepository) IsAcceptedFollower(followerID, followingID uuid.UUI
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *GormUserRepository) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+	if userA == uuid.Nil || userB == uuid.Nil || userA == userB {
+		return false, nil
+	}
+	var count int64
+	err := r.db.Model(&model.Block{}).
+		Where("(blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)", userA, userB, userB, userA).
+		Count(&count).Error
+	return count > 0, err
 }

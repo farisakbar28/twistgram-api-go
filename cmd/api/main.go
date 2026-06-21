@@ -76,6 +76,7 @@ func main() {
 
 	// Protected routes (auth required)
 	userHandler := handler.NewUserHandler()
+	socialHandler := handler.NewSocialHandler()
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
@@ -83,6 +84,17 @@ func main() {
 		auth.PATCH("/users/me", userHandler.UpdateMe)
 		auth.PATCH("/users/me/privacy", userHandler.UpdatePrivacy)
 		auth.GET("/users/:username", userHandler.GetByUsername)
+		auth.POST("/users/:id/follow", socialHandler.Follow)
+		auth.DELETE("/users/:id/follow", socialHandler.Unfollow)
+		auth.GET("/users/:id/followers", socialHandler.Followers)
+		auth.GET("/users/:id/following", socialHandler.Following)
+		auth.DELETE("/users/:id/followers", socialHandler.RemoveFollower)
+		auth.GET("/users/me/follow-requests", socialHandler.FollowRequests)
+		auth.POST("/users/:id/follow-requests/approve", socialHandler.ApproveFollowRequest)
+		auth.POST("/users/:id/follow-requests/decline", socialHandler.DeclineFollowRequest)
+		auth.POST("/users/:id/block", socialHandler.Block)
+		auth.DELETE("/users/:id/block", socialHandler.Unblock)
+		auth.POST("/reports", socialHandler.Report)
 	}
 
 	// Start server

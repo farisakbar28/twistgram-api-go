@@ -153,6 +153,13 @@ func (s *UserService) GetProfileByUsername(username string, viewerID uuid.UUID) 
 	isSelf := viewerID != uuid.Nil && viewerID == user.ID
 	isFollowing := false
 	if viewerID != uuid.Nil && !isSelf {
+		blocked, err := s.repo.IsBlockedEitherDirection(viewerID, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		if blocked {
+			return nil, ErrUserBlocked
+		}
 		isFollowing, err = s.repo.IsAcceptedFollower(viewerID, user.ID)
 		if err != nil {
 			return nil, err

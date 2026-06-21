@@ -16,10 +16,10 @@ type Response struct {
 
 // Meta holds pagination metadata
 type Meta struct {
-	Page        int   `json:"page"`
-	Limit       int   `json:"limit"`
-	Total       int64 `json:"total"`
-	TotalPages  int   `json:"total_pages"`
+	Page       int   `json:"page"`
+	Limit      int   `json:"limit"`
+	Total      int64 `json:"total"`
+	TotalPages int   `json:"total_pages"`
 }
 
 // PaginatedResponse wraps data with pagination meta
@@ -69,6 +69,15 @@ func Unauthorized(c *gin.Context, message string) {
 // Forbidden sends a 403 error
 func Forbidden(c *gin.Context, message string) {
 	Error(c, http.StatusForbidden, message)
+}
+
+// ForbiddenCode sends a 403 error with an explicit machine-readable code.
+func ForbiddenCode(c *gin.Context, code, message string) {
+	c.JSON(http.StatusForbidden, Response{
+		Success: false,
+		Message: message,
+		Error:   code,
+	})
 }
 
 // NotFound sends a 404 error
