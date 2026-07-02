@@ -18,6 +18,7 @@ type Config struct {
 	CORSAllowOrigins  string
 	DatabaseURL       string
 	SupabaseURL       string
+	SupabaseAnonKey   string
 	SupabaseSecretKey string
 	SupabaseJWTSecret string
 }
@@ -31,6 +32,7 @@ func LoadConfig() *Config {
 		CORSAllowOrigins:  getEnv("CORS_ALLOW_ORIGINS", "*"),
 		DatabaseURL:       getEnv("DATABASE_URL", ""),
 		SupabaseURL:       getEnv("SUPABASE_URL", ""),
+		SupabaseAnonKey:   getEnv("SUPABASE_ANON_KEY", ""),
 		SupabaseSecretKey: getEnv("SUPABASE_SECRET_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 	}

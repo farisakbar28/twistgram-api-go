@@ -28,3 +28,6 @@ Thumbs.db
 
 # Dependencies
 /vendor/
+
+#AI
+opencode.json

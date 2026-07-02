@@ -9,6 +9,8 @@ import (
 	"twistgram-api-go/internal/handler"
 	"twistgram-api-go/internal/middleware"
 	"twistgram-api-go/internal/model"
+	"twistgram-api-go/internal/repository"
+	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
@@ -72,7 +74,18 @@ func main() {
 	v1 := r.Group("/api/v1")
 
 	// Public routes (no auth required)
-	// (to be added in later phases)
+	authRepo := repository.NewAuthRepository(db, cfg.SupabaseURL, cfg.SupabaseAnonKey)
+	authHandler := handler.NewAuthHandlerWithService(service.NewAuthService(authRepo))
+	public := v1.Group("")
+	{
+		public.POST("/auth/register", authHandler.Register)
+		public.POST("/auth/verify-otp", authHandler.VerifyOTP)
+		public.POST("/auth/login", authHandler.Login)
+		public.POST("/auth/forgot-password", authHandler.ForgotPassword)
+		public.POST("/auth/recover-username", authHandler.RecoverUsername)
+		public.POST("/auth/recover-email", authHandler.RecoverEmail)
+		public.POST("/auth/reset-password", authHandler.ResetPassword)
+	}
 
 	// Protected routes (auth required)
 	userHandler := handler.NewUserHandler()
