@@ -90,6 +90,8 @@ func main() {
 	// Protected routes (auth required)
 	userHandler := handler.NewUserHandler()
 	socialHandler := handler.NewSocialHandler()
+	postHandler := handler.NewPostHandler()
+	interactionHandler := handler.NewInteractionHandler()
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
@@ -108,6 +110,19 @@ func main() {
 		auth.POST("/users/:id/block", socialHandler.Block)
 		auth.DELETE("/users/:id/block", socialHandler.Unblock)
 		auth.POST("/reports", socialHandler.Report)
+		auth.POST("/posts", postHandler.Create)
+		auth.GET("/feed", postHandler.Feed)
+		auth.GET("/users/me/posts", postHandler.MyPosts)
+		auth.DELETE("/posts/:id", postHandler.Delete)
+		auth.POST("/posts/:id/archive", postHandler.Archive)
+		auth.POST("/posts/:id/unarchive", postHandler.Unarchive)
+		auth.POST("/posts/:id/like", interactionHandler.LikePost)
+		auth.DELETE("/posts/:id/like", interactionHandler.UnlikePost)
+		auth.POST("/posts/:id/comments", interactionHandler.Comment)
+		auth.DELETE("/posts/:id/comments/:comment_id", interactionHandler.DeleteComment)
+		auth.POST("/posts/:id/comments/:comment_id/like", interactionHandler.LikeComment)
+		auth.POST("/posts/:id/save", interactionHandler.SavePost)
+		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
 	}
 
 	// Start server
