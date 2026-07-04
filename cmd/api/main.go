@@ -104,6 +104,7 @@ func main() {
 	public.Use(middleware.RateLimit(5, 10))
 	{
 		public.POST("/auth/register", authHandler.Register)
+		public.GET("/auth/check-availability", authHandler.CheckAvailability)
 		public.POST("/auth/verify-otp", authHandler.VerifyOTP)
 		public.POST("/auth/login", authHandler.Login)
 		public.POST("/auth/forgot-password", authHandler.ForgotPassword)

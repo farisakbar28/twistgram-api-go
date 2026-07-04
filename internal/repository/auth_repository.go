@@ -19,17 +19,19 @@ type AuthRepository interface {
 	RecoverUsername(req dto.RecoverUsernameRequest) error
 	RecoverEmail(req dto.RecoverEmailRequest) error
 	ResetPassword(req dto.ResetPasswordRequest) error
+	IsUsernameAvailable(username string) (bool, error)
+	IsEmailAvailable(email string) (bool, error)
 }
 
 type SupabaseAuthRepository struct {
 	baseURL    string
 	authKey    string
 	httpClient *http.Client
+	db         *gorm.DB
 }
 
 func NewAuthRepository(db *gorm.DB, baseURL, authKey string) AuthRepository {
-	_ = db
-	return &SupabaseAuthRepository{baseURL: strings.TrimRight(baseURL, "/"), authKey: authKey, httpClient: &http.Client{}}
+	return &SupabaseAuthRepository{db: db, baseURL: strings.TrimRight(baseURL, "/"), authKey: authKey, httpClient: &http.Client{}}
 }
 
 func (r *SupabaseAuthRepository) Register(req dto.RegisterRequest) (*dto.AuthResponse, error) {
@@ -75,6 +77,18 @@ func (r *SupabaseAuthRepository) ResetPassword(req dto.ResetPasswordRequest) err
 	payload := map[string]any{"password": req.Password}
 	var out map[string]any
 	return r.post("/auth/v1/user", payload, &out)
+}
+
+func (r *SupabaseAuthRepository) IsUsernameAvailable(username string) (bool, error) {
+	var count int64
+	err := r.db.Table("users").Where("username = ?", username).Count(&count).Error
+	return count == 0, err
+}
+
+func (r *SupabaseAuthRepository) IsEmailAvailable(email string) (bool, error) {
+	var count int64
+	err := r.db.Table("users").Where("email = ?", email).Count(&count).Error
+	return count == 0, err
 }
 
 func (r *SupabaseAuthRepository) post(path string, payload any, out any) error {

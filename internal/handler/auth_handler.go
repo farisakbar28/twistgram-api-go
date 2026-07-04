@@ -46,6 +46,14 @@ func (h *AuthHandler) RecoverEmail(c *gin.Context) {
 	response.Success(c, gin.H{"message": "OTP sent"})
 }
 
+func (h *AuthHandler) CheckAvailability(c *gin.Context) {
+	var req dto.CheckAvailabilityRequest
+	_ = c.ShouldBindQuery(&req)
+	res, err := h.authService.CheckAvailability(req)
+	if h.handleAuthError(c, err) { return }
+	if res.Available { response.Success(c, res) } else { response.Error(c, 409, res.Message) }
+}
+
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req dto.ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
