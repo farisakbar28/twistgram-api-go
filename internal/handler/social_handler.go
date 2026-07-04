@@ -187,7 +187,7 @@ func (h *SocialHandler) Report(c *gin.Context) {
 }
 
 func parseIDParam(c *gin.Context) (uuid.UUID, bool) {
-	id, err := uuid.Parse(c.Param("id"))
+	id, err := uuid.Parse(c.Param("identifier"))
 	if err != nil {
 		response.BadRequest(c, "Invalid user id")
 		return uuid.Nil, false

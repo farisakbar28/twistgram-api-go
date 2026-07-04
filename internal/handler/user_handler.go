@@ -107,7 +107,7 @@ func (h *UserHandler) GetByUsername(c *gin.Context) {
 		return
 	}
 
-	profile, err := h.userService.GetProfileByUsername(c.Param("username"), viewerID)
+	profile, err := h.userService.GetProfileByUsername(c.Param("identifier"), viewerID)
 	h.handleServiceResult(c, profile, err)
 }
 
