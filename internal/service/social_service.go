@@ -55,6 +55,9 @@ func (s *SocialService) Follow(viewerID, targetID uuid.UUID) (*dto.FollowStatusR
 	if err := s.repo.UpsertFollow(&model.Follow{FollowerID: viewerID, FollowingID: targetID, Status: status}); err != nil {
 		return nil, err
 	}
+	notifType := "follow"
+	if status == "pending" { notifType = "follow_request" }
+	_ = s.repo.CreateNotification(&model.Notification{RecipientID: targetID, ActorID: viewerID, Type: notifType})
 	return &dto.FollowStatusResponse{TargetID: targetID.String(), Status: status}, nil
 }
 

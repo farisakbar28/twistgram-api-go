@@ -26,3 +26,16 @@ type SaveStatusResponse struct {
 	PostID string `json:"post_id"`
 	Saved  bool   `json:"saved"`
 }
+
+type SavedPostResponse struct {
+	ID        string       `json:"id"`
+	PostID    string       `json:"post_id"`
+	Collection string      `json:"collection_name"`
+	CreatedAt time.Time    `json:"created_at"`
+	// Minimal post detail
+	Caption   *string      `json:"caption,omitempty"`
+}
+
+type ShareResponse struct {
+	Link string `json:"link"`
+}

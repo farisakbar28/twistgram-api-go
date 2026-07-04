@@ -47,6 +47,18 @@ func (h *PostHandler) MyPosts(c *gin.Context) {
 	response.WithPagination(c, gin.H{"posts": items}, buildMeta(pg, lm, total))
 }
 
+func (h *PostHandler) EditCaption(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	id, ok := parsePostID(c); if !ok { return }
+	var req dto.UpdatePostRequest
+	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if err := h.postService.EditCaption(userID, id, req); err != nil {
+		if errors.Is(err, service.ErrInvalidInput) { response.BadRequest(c, "Invalid caption") } else if errors.Is(err, service.ErrPostNotFound) { response.NotFound(c, "Post not found") } else if errors.Is(err, service.ErrForbidden) { response.Forbidden(c, "You do not own this post") } else { response.InternalError(c, "Failed to update post") }
+		return
+	}
+	response.Success(c, gin.H{"updated": true})
+}
+
 func (h *PostHandler) Archive(c *gin.Context) {
 	userID, ok := authUser(c); if !ok { return }
 	id, ok := parsePostID(c); if !ok { return }

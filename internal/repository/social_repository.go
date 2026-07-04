@@ -27,6 +27,7 @@ type SocialRepository interface {
 	UserExists(id uuid.UUID) (bool, error)
 	PostExists(id uuid.UUID) (bool, error)
 	CommentExists(id uuid.UUID) (bool, error)
+	CreateNotification(notification *model.Notification) error
 }
 
 type GormSocialRepository struct {
@@ -111,6 +112,10 @@ func (r *GormSocialRepository) UpdateFollowStatus(followerID, followingID uuid.U
 		return gorm.ErrRecordNotFound
 	}
 	return nil
+}
+
+func (r *GormSocialRepository) CreateNotification(notification *model.Notification) error {
+	return r.db.Create(notification).Error
 }
 
 func (r *GormSocialRepository) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {

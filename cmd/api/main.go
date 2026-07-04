@@ -2,8 +2,11 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/handler"
@@ -55,6 +58,26 @@ func main() {
 	// Setup Gin router
 	r := gin.Default()
 
+	// Use security headers
+	r.Use(middleware.SecurityHeaders())
+
+	// Use CORS middleware
+	corsConfig := cors.DefaultConfig()
+	if cfg.CORSAllowOrigins == "*" {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = strings.Split(cfg.CORSAllowOrigins, ",")
+	}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	r.Use(cors.New(corsConfig))
+
+	// Limit JSON body size to 2MB (2 * 1024 * 1024)
+	r.Use(func(c *gin.Context) {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 2<<20)
+		c.Next()
+	})
+
 	// Health check endpoint (public)
 	r.GET("/health", func(c *gin.Context) {
 		sqlDB, err := config.GetDB().DB()
@@ -77,6 +100,8 @@ func main() {
 	authRepo := repository.NewAuthRepository(db, cfg.SupabaseURL, cfg.SupabaseAnonKey)
 	authHandler := handler.NewAuthHandlerWithService(service.NewAuthService(authRepo))
 	public := v1.Group("")
+	// Apply rate limiting to public endpoints (5 req/sec, burst 10)
+	public.Use(middleware.RateLimit(5, 10))
 	{
 		public.POST("/auth/register", authHandler.Register)
 		public.POST("/auth/verify-otp", authHandler.VerifyOTP)
@@ -94,12 +119,16 @@ func main() {
 	interactionHandler := handler.NewInteractionHandler()
 	storyHandler := handler.NewStoryHandler()
 	searchHandler := handler.NewSearchHandler()
+	dmHandler := handler.NewDMHandler()
+	notificationHandler := handler.NewNotificationHandler()
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
 		auth.GET("/users/me", userHandler.GetMe)
 		auth.PATCH("/users/me", userHandler.UpdateMe)
 		auth.PATCH("/users/me/privacy", userHandler.UpdatePrivacy)
+		auth.GET("/users/me/interests", userHandler.GetInterests)
+		auth.PUT("/users/me/interests", userHandler.SetInterests)
 		auth.GET("/users/:username", userHandler.GetByUsername)
 		auth.POST("/users/:id/follow", socialHandler.Follow)
 		auth.DELETE("/users/:id/follow", socialHandler.Unfollow)
@@ -113,6 +142,7 @@ func main() {
 		auth.DELETE("/users/:id/block", socialHandler.Unblock)
 		auth.POST("/reports", socialHandler.Report)
 		auth.POST("/posts", postHandler.Create)
+		auth.PATCH("/posts/:id", postHandler.EditCaption)
 		auth.GET("/feed", postHandler.Feed)
 		auth.GET("/users/me/posts", postHandler.MyPosts)
 		auth.DELETE("/posts/:id", postHandler.Delete)
@@ -120,17 +150,26 @@ func main() {
 		auth.POST("/posts/:id/unarchive", postHandler.Unarchive)
 		auth.POST("/posts/:id/like", interactionHandler.LikePost)
 		auth.DELETE("/posts/:id/like", interactionHandler.UnlikePost)
+		auth.GET("/posts/:id/comments", interactionHandler.ListComments)
 		auth.POST("/posts/:id/comments", interactionHandler.Comment)
 		auth.DELETE("/posts/:id/comments/:comment_id", interactionHandler.DeleteComment)
 		auth.POST("/posts/:id/comments/:comment_id/like", interactionHandler.LikeComment)
+		auth.GET("/users/me/saved", interactionHandler.ListSavedPosts)
 		auth.POST("/posts/:id/save", interactionHandler.SavePost)
 		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
+		auth.POST("/posts/:id/share", interactionHandler.SharePost)
 		auth.POST("/stories", storyHandler.Create)
 		auth.GET("/stories/feed", storyHandler.Feed)
 		auth.GET("/stories/:id", storyHandler.GetByID)
 		auth.POST("/stories/:id/views", storyHandler.RecordView)
 		auth.GET("/stories/:id/viewers", storyHandler.Viewers)
 		auth.GET("/search", searchHandler.Search)
+		auth.GET("/conversations", dmHandler.ListConversations)
+		auth.POST("/conversations", dmHandler.StartConversation)
+		auth.GET("/conversations/:id/messages", dmHandler.ListMessages)
+		auth.POST("/conversations/:id/messages", dmHandler.SendMessage)
+		auth.GET("/notifications", notificationHandler.List)
+		auth.POST("/notifications/:id/read", notificationHandler.Read)
 	}
 
 	// Start server

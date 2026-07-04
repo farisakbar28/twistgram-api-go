@@ -110,6 +110,36 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 	return &profile, nil
 }
 
+func (s *UserService) GetInterests(userID uuid.UUID) (*dto.UserInterestsResponse, error) {
+	if userID == uuid.Nil { return nil, ErrInvalidInput }
+	if err := s.ensureUserExists(userID); err != nil { return nil, err }
+	interests, err := s.repo.GetInterests(userID)
+	if err != nil { return nil, err }
+	return &dto.UserInterestsResponse{Interests: interests}, nil
+}
+
+func (s *UserService) SetInterests(userID uuid.UUID, req dto.UserInterestsRequest) (*dto.UserInterestsResponse, error) {
+	if userID == uuid.Nil { return nil, ErrInvalidInput }
+	if err := s.ensureUserExists(userID); err != nil { return nil, err }
+	clean := make([]string, 0, len(req.Interests))
+	seen := make(map[string]bool)
+	for _, cat := range req.Interests {
+		c := strings.TrimSpace(strings.ToLower(cat))
+		if c != "" && !seen[c] {
+			clean = append(clean, c)
+			seen[c] = true
+		}
+	}
+	if err := s.repo.SetInterests(userID, clean); err != nil { return nil, err }
+	return &dto.UserInterestsResponse{Interests: clean}, nil
+}
+
+func (s *UserService) ensureUserExists(userID uuid.UUID) error {
+	_, err := s.repo.FindByID(userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) { return ErrUserNotFound }
+	return err
+}
+
 func (s *UserService) UpdatePrivacy(userID uuid.UUID, req dto.UpdatePrivacyRequest) (*dto.UserProfileResponse, error) {
 	if req.IsPrivate == nil {
 		return nil, ErrInvalidInput

@@ -37,7 +37,57 @@ func (s *InteractionService) CreateComment(userID, postID uuid.UUID, req dto.Cre
 	}
 	comment := &model.Comment{PostID: postID, UserID: userID, Content: content, ParentCommentID: parentID}
 	if err := s.repo.CreateComment(comment); err != nil { return nil, err }
+	
+	ownerID, _ := s.repo.GetPostOwner(postID)
+	if ownerID != nil && ownerID.UserID != userID {
+		_ = s.repo.CreateNotification(&model.Notification{RecipientID: ownerID.UserID, ActorID: userID, Type: "comment", ReferenceID: &postID})
+	}
+	
 	return &dto.CommentResponse{ID: comment.ID.String(), PostID: postID.String(), UserID: userID.String(), Content: comment.Content, IsPinned: comment.IsPinned, CreatedAt: comment.CreatedAt}, nil
+}
+
+func (s *InteractionService) ListComments(userID, postID uuid.UUID, page, limit int) ([]dto.CommentResponse, int64, error) {
+	if postID == uuid.Nil { return nil, 0, ErrInvalidInput }
+	exists, err := s.repo.PostExists(postID)
+	if err != nil { return nil, 0, err }
+	if !exists { return nil, 0, ErrPostNotFound }
+	if err := s.ensurePostVisible(userID, postID); err != nil { return nil, 0, err }
+	if page < 1 { page = 1 }
+	if limit < 1 { limit = 20 }
+	comments, total, err := s.repo.ListPostComments(postID, page, limit)
+	if err != nil { return nil, 0, err }
+	out := make([]dto.CommentResponse, 0, len(comments))
+	for _, c := range comments {
+		var parentID *string
+		if c.ParentCommentID != nil { p := c.ParentCommentID.String(); parentID = &p }
+		out = append(out, dto.CommentResponse{ID: c.ID.String(), PostID: c.PostID.String(), UserID: c.UserID.String(), ParentCommentID: parentID, Content: c.Content, IsPinned: c.IsPinned, CreatedAt: c.CreatedAt})
+	}
+	return out, total, nil
+}
+
+func (s *InteractionService) ListSavedPosts(userID uuid.UUID, page, limit int) ([]dto.SavedPostResponse, int64, error) {
+	if userID == uuid.Nil { return nil, 0, ErrInvalidInput }
+	if page < 1 { page = 1 }
+	if limit < 1 { limit = 20 }
+	saved, total, err := s.repo.ListSavedPosts(userID, page, limit)
+	if err != nil { return nil, 0, err }
+	out := make([]dto.SavedPostResponse, 0, len(saved))
+	for _, sv := range saved {
+		out = append(out, dto.SavedPostResponse{ID: sv.ID.String(), PostID: sv.PostID.String(), Collection: sv.CollectionName, CreatedAt: sv.CreatedAt, Caption: sv.Post.Caption})
+	}
+	return out, total, nil
+}
+
+func (s *InteractionService) SharePost(userID, postID uuid.UUID) (*dto.ShareResponse, error) {
+	if postID == uuid.Nil { return nil, ErrInvalidInput }
+	exists, err := s.repo.PostExists(postID)
+	if err != nil { return nil, err }
+	if !exists { return nil, ErrPostNotFound }
+	if err := s.ensurePostVisible(userID, postID); err != nil { return nil, err }
+	// In MVP, we just generate a static link structure
+	// Real implementation would log this to an analytics table
+	link := "https://twistgram.app/p/" + postID.String()
+	return &dto.ShareResponse{Link: link}, nil
 }
 
 func (s *InteractionService) DeleteComment(userID, commentID uuid.UUID) error {
@@ -61,6 +111,12 @@ func (s *InteractionService) LikePost(userID, postID uuid.UUID) (*dto.LikeStatus
 	if !exists { return nil, ErrPostNotFound }
 	if err := s.ensurePostVisible(userID, postID); err != nil { return nil, err }
 	if err := s.repo.UpsertLike(&model.Like{UserID: userID, LikeableType: "post", LikeableID: postID}); err != nil { return nil, err }
+	
+	ownerID, _ := s.repo.GetPostOwner(postID)
+	if ownerID != nil && ownerID.UserID != userID {
+		_ = s.repo.CreateNotification(&model.Notification{RecipientID: ownerID.UserID, ActorID: userID, Type: "like", ReferenceID: &postID})
+	}
+	
 	return &dto.LikeStatusResponse{TargetID: postID.String(), Liked: true}, nil
 }
 

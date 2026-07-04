@@ -46,6 +46,35 @@ func (h *InteractionHandler) Comment(c *gin.Context) {
 	response.Created(c, gin.H{"comment": res})
 }
 
+func (h *InteractionHandler) ListComments(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	postID, ok := parsePostID(c); if !ok { return }
+	page := _page(c)
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	items, total, err := h.service.ListComments(userID, postID, page, limit)
+	if h.handleError(c, err) { return }
+	totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }
+	response.WithPagination(c, gin.H{"comments": items}, &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages})
+}
+
+func (h *InteractionHandler) ListSavedPosts(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	page := _page(c)
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	items, total, err := h.service.ListSavedPosts(userID, page, limit)
+	if h.handleError(c, err) { return }
+	totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }
+	response.WithPagination(c, gin.H{"saved_posts": items}, &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages})
+}
+
+func (h *InteractionHandler) SharePost(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	postID, ok := parsePostID(c); if !ok { return }
+	res, err := h.service.SharePost(userID, postID)
+	if h.handleError(c, err) { return }
+	response.Success(c, gin.H{"share": res})
+}
+
 func (h *InteractionHandler) DeleteComment(c *gin.Context) {
 	userID, ok := authUser(c); if !ok { return }
 	commentID, ok := parseCommentParam(c); if !ok { return }

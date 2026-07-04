@@ -14,6 +14,14 @@ type UpdatePrivacyRequest struct {
 	IsPrivate *bool `json:"is_private"`
 }
 
+type UserInterestsRequest struct {
+	Interests []string `json:"interests" binding:"required"`
+}
+
+type UserInterestsResponse struct {
+	Interests []string `json:"interests"`
+}
+
 type UserProfileResponse struct {
 	ID             string     `json:"id"`
 	Name           string     `json:"name"`

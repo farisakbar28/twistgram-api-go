@@ -24,10 +24,13 @@ type InteractionRepository interface {
 	SavedExists(userID, postID uuid.UUID) (bool, error)
 	UpsertSavedPost(saved *model.SavedPost) error
 	DeleteSavedPost(userID, postID uuid.UUID) error
+	ListPostComments(postID uuid.UUID, page, limit int) ([]model.Comment, int64, error)
+	ListSavedPosts(userID uuid.UUID, page, limit int) ([]model.SavedPost, int64, error)
 	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
 	GetPostOwner(postID uuid.UUID) (*PostOwnerInfo, error)
 	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
 	GetCommentPostID(commentID uuid.UUID) (uuid.UUID, error)
+	CreateNotification(notification *model.Notification) error
 }
 
 type GormInteractionRepository struct{ db *gorm.DB }
@@ -90,6 +93,24 @@ func (r *GormInteractionRepository) DeleteSavedPost(userID, postID uuid.UUID) er
 	return r.db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&model.SavedPost{}).Error
 }
 
+func (r *GormInteractionRepository) ListPostComments(postID uuid.UUID, page, limit int) ([]model.Comment, int64, error) {
+	var total int64
+	query := r.db.Model(&model.Comment{}).Where("post_id = ? AND deleted_at IS NULL", postID)
+	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	var comments []model.Comment
+	err := query.Order("created_at ASC").Offset((page-1)*limit).Limit(limit).Find(&comments).Error
+	return comments, total, err
+}
+
+func (r *GormInteractionRepository) ListSavedPosts(userID uuid.UUID, page, limit int) ([]model.SavedPost, int64, error) {
+	var total int64
+	query := r.db.Model(&model.SavedPost{}).Where("user_id = ?", userID)
+	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	var saved []model.SavedPost
+	err := query.Preload("Post").Preload("Post.Media").Order("created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&saved).Error
+	return saved, total, err
+}
+
 func (r *GormInteractionRepository) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
 	var count int64
 	err := r.db.Model(&model.Block{}).Where(
@@ -112,6 +133,10 @@ func (r *GormInteractionRepository) GetPostOwner(postID uuid.UUID) (*PostOwnerIn
 	if err != nil { return nil, err }
 	if result.UserID == uuid.Nil { return nil, gorm.ErrRecordNotFound }
 	return &PostOwnerInfo{UserID: result.UserID, IsPrivate: result.IsPrivate}, nil
+}
+
+func (r *GormInteractionRepository) CreateNotification(notification *model.Notification) error {
+	return r.db.Create(notification).Error
 }
 
 func (r *GormInteractionRepository) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {

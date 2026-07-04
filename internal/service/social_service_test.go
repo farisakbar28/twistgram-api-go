@@ -21,6 +21,7 @@ type fakeSocialRepo struct {
 	reports        []*model.Report
 }
 
+func (f *fakeSocialRepo) CreateNotification(n *model.Notification) error { return nil }
 func (f *fakeSocialRepo) FindUserByID(id uuid.UUID) (*model.User, error) {
 	if user, ok := f.users[id]; ok {
 		copyUser := *user

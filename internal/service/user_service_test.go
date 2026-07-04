@@ -44,7 +44,11 @@ func (f *fakeUserRepo) Update(user *model.User) error {
 	return nil
 }
 
-func (f *fakeUserRepo) CountFollowers(userID uuid.UUID) (int64, error) { return 1, nil }
+func (f *fakeUserRepo) GetInterests(userID uuid.UUID) ([]string, error) { return nil, nil }
+func (f *fakeUserRepo) SetInterests(userID uuid.UUID, interests []string) error { return nil }
+
+func (f *fakeUserRepo) CountFollowers(userID uuid.UUID) (int64, error) {
+ return 1, nil }
 func (f *fakeUserRepo) CountFollowing(userID uuid.UUID) (int64, error) { return 2, nil }
 func (f *fakeUserRepo) CountPosts(userID uuid.UUID) (int64, error)     { return 3, nil }
 func (f *fakeUserRepo) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {

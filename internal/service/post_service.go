@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,6 +13,7 @@ import (
 
 var ErrPostNotFound = errors.New("post not found")
 var ErrForbidden = errors.New("forbidden")
+var hashtagRegex = regexp.MustCompile(`#[^\s!@#$%^&*()=+.\/,\[{\]};:'"?><]+`)
 
 type PostService struct{ repo repository.PostRepository }
 
@@ -20,11 +22,36 @@ func NewPostService(repo repository.PostRepository) *PostService { return &PostS
 func (s *PostService) CreatePost(userID uuid.UUID, req dto.CreatePostRequest) (*dto.PostResponse, error) {
 	if userID == uuid.Nil || len(req.Media) == 0 { return nil, ErrInvalidInput }
 	if err := validateCreatePostRequest(req); err != nil { return nil, err }
+	
 	post := &model.Post{UserID: userID, Caption: cleanOptional(req.Caption), Location: cleanOptional(req.Location)}
 	if req.CommentsDisabled != nil { post.CommentsDisabled = *req.CommentsDisabled }
+	
 	media := make([]model.PostMedia, 0, len(req.Media))
 	for _, m := range req.Media { media = append(media, model.PostMedia{MediaURL: strings.TrimSpace(m.MediaURL), MediaType: strings.TrimSpace(strings.ToLower(m.MediaType)), OrderIndex: m.OrderIndex, MusicTrackURL: cleanOptional(m.MusicTrackURL)}) }
-	if err := s.repo.CreatePostWithMedia(post, media); err != nil { return nil, err }
+	
+	tags := make([]model.PostTag, 0)
+	for _, idStr := range req.TaggedUserIDs {
+		parsed, err := uuid.Parse(strings.TrimSpace(idStr))
+		if err != nil || parsed == userID { continue }
+		tags = append(tags, model.PostTag{TaggedUserID: parsed})
+	}
+	
+	var hashtags []model.Hashtag
+	if post.Caption != nil {
+		matches := hashtagRegex.FindAllString(*post.Caption, -1)
+		for _, match := range matches {
+			tag := strings.ToLower(strings.TrimPrefix(match, "#"))
+			if tag != "" { hashtags = append(hashtags, model.Hashtag{Tag: tag}) }
+		}
+	}
+	
+	if err := s.repo.CreatePostWithMediaAndTags(post, media, tags, hashtags); err != nil { return nil, err }
+	
+	// Send mention notifications
+	for _, tag := range tags {
+		_ = s.repo.CreateNotification(&model.Notification{RecipientID: tag.TaggedUserID, ActorID: userID, Type: "mention", ReferenceID: &post.ID})
+	}
+	
 	return &dto.PostResponse{ID: post.ID.String(), UserID: userID.String(), Caption: post.Caption, Location: post.Location, IsArchived: post.IsArchived, CommentsDisabled: post.CommentsDisabled, CreatedAt: post.CreatedAt}, nil
 }
 
@@ -39,7 +66,17 @@ func validateCreatePostRequest(req dto.CreatePostRequest) error {
 	return nil
 }
 
-func (s *PostService) Feed(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) { posts, total, err := s.repo.ListFeed(userID, page, limit); if err != nil { return nil, 0, err }; return buildPosts(posts), total, nil }
+func (s *PostService) Feed(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+	posts, total, err := s.repo.ListFeed(userID, page, limit)
+	if err != nil { return nil, 0, err }
+	if total == 0 {
+		// Fallback to global explore if no following posts
+		fbPosts, fbTotal, fbErr := s.repo.ListGlobalFeed(limit)
+		if fbErr != nil { return nil, 0, fbErr }
+		return buildPosts(fbPosts), fbTotal, nil
+	}
+	return buildPosts(posts), total, nil
+}
 func (s *PostService) MyPosts(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) { posts, total, err := s.repo.ListUserPosts(userID, page, limit); if err != nil { return nil, 0, err }; return buildPosts(posts), total, nil }
 func (s *PostService) Archive(userID, postID uuid.UUID, archived bool) error {
 	exists, err := s.repo.PostExists(postID)
@@ -50,6 +87,18 @@ func (s *PostService) Archive(userID, postID uuid.UUID, archived bool) error {
 	if !owns { return ErrForbidden }
 	return s.repo.SetArchived(postID, userID, archived)
 }
+func (s *PostService) EditCaption(userID, postID uuid.UUID, req dto.UpdatePostRequest) error {
+	exists, err := s.repo.PostExists(postID)
+	if err != nil { return err }
+	if !exists { return ErrPostNotFound }
+	owns, err := s.repo.OwnsPost(postID, userID)
+	if err != nil { return err }
+	if !owns { return ErrForbidden }
+	
+	if req.Caption != nil && len(strings.TrimSpace(*req.Caption)) > 2200 { return ErrInvalidInput }
+	return s.repo.UpdateCaption(postID, userID, cleanOptional(req.Caption))
+}
+
 func (s *PostService) Delete(userID, postID uuid.UUID) error {
 	exists, err := s.repo.PostExists(postID)
 	if err != nil { return err }

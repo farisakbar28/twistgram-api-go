@@ -16,6 +16,8 @@ type UserRepository interface {
 	CountFollowers(userID uuid.UUID) (int64, error)
 	CountFollowing(userID uuid.UUID) (int64, error)
 	CountPosts(userID uuid.UUID) (int64, error)
+	GetInterests(userID uuid.UUID) ([]string, error)
+	SetInterests(userID uuid.UUID, interests []string) error
 	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
 	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
 }
@@ -78,6 +80,28 @@ func (r *GormUserRepository) CountPosts(userID uuid.UUID) (int64, error) {
 		Where("user_id = ? AND deleted_at IS NULL AND is_archived = ?", userID, false).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *GormUserRepository) GetInterests(userID uuid.UUID) ([]string, error) {
+	var interests []model.UserInterest
+	if err := r.db.Where("user_id = ?", userID).Find(&interests).Error; err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(interests))
+	for _, i := range interests { out = append(out, i.InterestCategory) }
+	return out, nil
+}
+
+func (r *GormUserRepository) SetInterests(userID uuid.UUID, interests []string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", userID).Delete(&model.UserInterest{}).Error; err != nil { return err }
+		if len(interests) == 0 { return nil }
+		items := make([]model.UserInterest, 0, len(interests))
+		for _, cat := range interests {
+			items = append(items, model.UserInterest{UserID: userID, InterestCategory: cat})
+		}
+		return tx.Create(&items).Error
+	})
 }
 
 func (r *GormUserRepository) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {
