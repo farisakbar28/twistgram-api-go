@@ -25,6 +25,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 func (h *AuthHandler) Login(c *gin.Context) { var req dto.LoginRequest; if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }; res, err := h.authService.Login(req); if h.handleAuthError(c, err) { return }; response.Success(c, res) }
 func (h *AuthHandler) VerifyOTP(c *gin.Context) { var req dto.VerifyOTPRequest; if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }; res, err := h.authService.VerifyOTP(req); if h.handleAuthError(c, err) { return }; response.Success(c, res) }
+
+func (h *AuthHandler) ResendOTP(c *gin.Context) {
+	var req dto.ResendOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if h.handleAuthError(c, h.authService.ResendOTP(req)) { return }
+	response.Success(c, gin.H{"message": "OTP sent"})
+}
+
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req dto.ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }

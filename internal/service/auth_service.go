@@ -35,10 +35,15 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 	if req.Email == "" || req.Username == "" || req.Password == "" || req.Name == "" { return nil, ErrInvalidInput }
 	if !isValidPassword(req.Password) { return nil, errors.New("password must be at least 8 chars, contain an uppercase letter and a number/symbol") }
 
-	// Cek ketersediaan
-	emailAvail, err := s.repo.IsEmailAvailable(req.Email)
-	if err != nil { return nil, err }
-	if !emailAvail { return nil, errors.New("email already registered") }
+	// Cek ketersediaan email
+	existingUser, err := s.repo.FindUserByEmail(req.Email)
+	if err == nil && existingUser != nil {
+		if !existingUser.EmailVerified {
+			return nil, errors.New("email already registered but not verified. please request a new OTP")
+		}
+		return nil, errors.New("email already registered")
+	}
+
 	userAvail, err := s.repo.IsUsernameAvailable(req.Username)
 	if err != nil { return nil, err }
 	if !userAvail { return nil, errors.New("username already taken") }
@@ -58,17 +63,14 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 		EmailVerified: false,
 	}
 
-	if err := s.repo.CreateUser(user); err != nil { return nil, err }
-
-	// Send OTP
 	otpCode, _ := auth.GenerateOTP()
 	otp := &model.AuthOTP{
-		UserID:    user.ID,
 		Code:      otpCode,
 		Type:      "signup",
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
-	_ = s.repo.SaveOTP(otp)
+
+	if err := s.repo.CreateUserWithOTP(user, otp); err != nil { return nil, err }
 	_ = mailer.SendOTPEmail(user.Email, otpCode)
 
 	return &dto.AuthResponse{
@@ -85,6 +87,33 @@ func isValidPassword(p string) bool {
 		if unicode.IsNumber(c) || unicode.IsPunct(c) || unicode.IsSymbol(c) { hasSpecialOrNumber = true }
 	}
 	return hasUpper && hasSpecialOrNumber
+}
+
+func (s *AuthService) ResendOTP(req dto.ResendOTPRequest) error {
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if req.Email == "" || req.Type == "" { return ErrInvalidInput }
+
+	user, err := s.repo.FindUserByEmail(req.Email)
+	if err != nil || user == nil { return nil } // Silent return to prevent email enumeration
+
+	if req.Type == "signup" && user.EmailVerified {
+		return errors.New("email is already verified")
+	}
+
+	// Delete old OTPs for this type
+	_ = s.repo.DeleteOTPByUserID(user.ID, req.Type)
+
+	otpCode, _ := auth.GenerateOTP()
+	otp := &model.AuthOTP{
+		UserID:    user.ID,
+		Code:      otpCode,
+		Type:      req.Type,
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+	}
+	_ = s.repo.SaveOTP(otp)
+	_ = mailer.SendOTPEmail(user.Email, otpCode)
+
+	return nil
 }
 
 func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {

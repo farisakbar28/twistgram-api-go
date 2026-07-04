@@ -19,6 +19,11 @@ type VerifyOTPRequest struct {
 	Type   string `json:"type" binding:"required"`
 }
 
+type ResendOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	Type  string `json:"type" binding:"required"`
+}
+
 type ForgotPasswordRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
@@ -51,7 +56,7 @@ type AuthUserResponse struct {
 }
 
 type AuthResponse struct {
-	User    AuthUserResponse    `json:"user"`
+	User    AuthUserResponse     `json:"user"`
 	Session *AuthSessionResponse `json:"session,omitempty"`
-	Message string              `json:"message,omitempty"`
+	Message string               `json:"message,omitempty"`
 }

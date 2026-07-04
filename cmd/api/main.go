@@ -107,6 +107,7 @@ func main() {
 		public.POST("/auth/register", authHandler.Register)
 		public.GET("/auth/check-availability", authHandler.CheckAvailability)
 		public.POST("/auth/verify-otp", authHandler.VerifyOTP)
+		public.POST("/auth/resend-otp", authHandler.ResendOTP)
 		public.POST("/auth/login", authHandler.Login)
 		public.POST("/auth/forgot-password", authHandler.ForgotPassword)
 		public.POST("/auth/recover-username", authHandler.RecoverUsername)

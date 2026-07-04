@@ -9,13 +9,14 @@ import (
 )
 
 type AuthRepository interface {
-	CreateUser(user *model.User) error
+	CreateUserWithOTP(user *model.User, otp *model.AuthOTP) error
 	FindUserByEmail(email string) (*model.User, error)
 	FindUserByUsername(username string) (*model.User, error)
 	FindUserByPhone(phone string) (*model.User, error)
 	SaveOTP(otp *model.AuthOTP) error
 	FindValidOTP(userID uuid.UUID, code, otpType string) (*model.AuthOTP, error)
 	DeleteOTP(id uuid.UUID) error
+	DeleteOTPByUserID(userID uuid.UUID, otpType string) error
 	UpdateUser(user *model.User) error
 	IsUsernameAvailable(username string) (bool, error)
 	IsEmailAvailable(email string) (bool, error)
@@ -29,8 +30,12 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 	return &LocalAuthRepository{db: db}
 }
 
-func (r *LocalAuthRepository) CreateUser(user *model.User) error {
-	return r.db.Create(user).Error
+func (r *LocalAuthRepository) CreateUserWithOTP(user *model.User, otp *model.AuthOTP) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(user).Error; err != nil { return err }
+		otp.UserID = user.ID
+		return tx.Create(otp).Error
+	})
 }
 
 func (r *LocalAuthRepository) FindUserByEmail(email string) (*model.User, error) {
@@ -63,6 +68,10 @@ func (r *LocalAuthRepository) FindValidOTP(userID uuid.UUID, code, otpType strin
 
 func (r *LocalAuthRepository) DeleteOTP(id uuid.UUID) error {
 	return r.db.Where("id = ?", id).Delete(&model.AuthOTP{}).Error
+}
+
+func (r *LocalAuthRepository) DeleteOTPByUserID(userID uuid.UUID, otpType string) error {
+	return r.db.Where("user_id = ? AND type = ?", userID, otpType).Delete(&model.AuthOTP{}).Error
 }
 
 func (r *LocalAuthRepository) UpdateUser(user *model.User) error {
