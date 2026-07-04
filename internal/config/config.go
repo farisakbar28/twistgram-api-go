@@ -21,10 +21,15 @@ type Config struct {
 	SupabaseAnonKey   string
 	SupabaseSecretKey string
 	SupabaseJWTSecret string
+	SMTPHost          string
+	SMTPPort          string
+	SMTPUsername      string
+	SMTPPassword      string
+	SMTPFromEmail     string
 }
 
 func LoadConfig() *Config {
-	_ = godotenv.Load()
+	_ = godotenv.Overload()
 
 	cfg := &Config{
 		AppEnv:            getEnv("APP_ENV", "development"),
@@ -35,6 +40,11 @@ func LoadConfig() *Config {
 		SupabaseAnonKey:   getEnv("SUPABASE_ANON_KEY", ""),
 		SupabaseSecretKey: getEnv("SUPABASE_SECRET_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
+		SMTPHost:          getEnv("SMTP_HOST", ""),
+		SMTPPort:          getEnv("SMTP_PORT", ""),
+		SMTPUsername:      getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:      getEnv("SMTP_PASSWORD", ""),
+		SMTPFromEmail:     getEnv("SMTP_FROM_EMAIL", ""),
 	}
 
 	if cfg.DatabaseURL == "" {
