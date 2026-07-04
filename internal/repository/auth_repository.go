@@ -92,6 +92,9 @@ func (r *SupabaseAuthRepository) IsEmailAvailable(email string) (bool, error) {
 }
 
 func (r *SupabaseAuthRepository) post(path string, payload any, out any) error {
+	if r.authKey == "" {
+		return fmt.Errorf("supabase auth error: SUPABASE_ANON_KEY is not configured")
+	}
 	body, _ := json.Marshal(payload)
 	req, err := http.NewRequest(http.MethodPost, r.baseURL+path, bytes.NewReader(body))
 	if err != nil { return err }
@@ -103,7 +106,13 @@ func (r *SupabaseAuthRepository) post(path string, payload any, out any) error {
 	resp, err := r.httpClient.Do(req)
 	if err != nil { return err }
 	defer resp.Body.Close()
-	if resp.StatusCode >= 300 { return fmt.Errorf("supabase auth error: %s", resp.Status) }
+	if resp.StatusCode >= 300 {
+		var errResp map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		msg := resp.Status
+		if msgDetail, ok := errResp["msg"].(string); ok { msg = msgDetail } else if msgDetail, ok := errResp["message"].(string); ok { msg = msgDetail }
+		return fmt.Errorf("supabase auth error: %s", msg)
+	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 

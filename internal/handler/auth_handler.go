@@ -60,9 +60,13 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	if h.handleAuthError(c, h.authService.ResetPassword(req)) { return }
 	response.Success(c, gin.H{"message": "Password updated"})
 }
-
 func (h *AuthHandler) handleAuthError(c *gin.Context, err error) bool {
 	if err == nil { return false }
-	if errors.Is(err, service.ErrInvalidInput) { response.BadRequest(c, "Invalid request data") } else { response.InternalError(c, "Auth service unavailable") }
+	if errors.Is(err, service.ErrInvalidInput) { 
+		response.BadRequest(c, "Invalid request data") 
+	} else { 
+		// Return inner error detail for clarity during MVP development
+		response.InternalError(c, "Auth service error: "+err.Error()) 
+	}
 	return true
 }
