@@ -6,6 +6,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/model"
@@ -264,4 +266,40 @@ func (s *AuthService) ResetPassword(req dto.ResetPasswordRequest) error {
 	_ = s.repo.DeleteOTP(otp.ID)
 
 	return nil
+}
+
+func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
+	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
+	if req.RefreshToken == "" { return nil, ErrInvalidInput }
+
+	token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		return []byte(s.cfg.SupabaseJWTSecret), nil
+	})
+
+	if err != nil || !token.Valid { return nil, errors.New("invalid refresh token") }
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || claims["type"] != "refresh" { return nil, errors.New("invalid token type") }
+
+	sub, ok := claims["sub"].(string)
+	if !ok { return nil, errors.New("invalid token payload") }
+
+	userID, err := uuid.Parse(sub)
+	if err != nil { return nil, errors.New("invalid user id in token") }
+
+	user, err := s.repo.FindUserByID(userID)
+	if err != nil || user == nil { return nil, errors.New("user not found") }
+
+	accessToken, refreshToken, err := auth.GenerateJWT(user.ID, user.Email, s.cfg.SupabaseJWTSecret)
+	if err != nil { return nil, err }
+
+	return &dto.AuthResponse{
+		Message: "Token refreshed successfully",
+		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email},
+		Session: &dto.AuthSessionResponse{
+			AccessToken:  accessToken,
+			RefreshToken: refreshToken,
+			TokenType:    "Bearer",
+		},
+	}, nil
 }

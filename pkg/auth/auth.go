@@ -39,6 +39,8 @@ func GenerateJWT(userID uuid.UUID, email, secret string) (accessToken, refreshTo
 	accessClaims := jwt.MapClaims{
 		"sub":   userID.String(),
 		"email": email,
+		"aud":   "authenticated",
+		"role":  "authenticated",
 		"iat":   time.Now().Unix(),
 		"exp":   time.Now().Add(time.Hour).Unix(),
 	}

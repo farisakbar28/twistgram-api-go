@@ -13,6 +13,7 @@ type AuthRepository interface {
 	FindUserByEmail(email string) (*model.User, error)
 	FindUserByUsername(username string) (*model.User, error)
 	FindUserByPhone(phone string) (*model.User, error)
+	FindUserByID(id uuid.UUID) (*model.User, error)
 	SaveOTP(otp *model.AuthOTP) error
 	FindValidOTP(userID uuid.UUID, code, otpType string) (*model.AuthOTP, error)
 	DeleteOTP(id uuid.UUID) error
@@ -53,6 +54,12 @@ func (r *LocalAuthRepository) FindUserByUsername(username string) (*model.User, 
 func (r *LocalAuthRepository) FindUserByPhone(phone string) (*model.User, error) {
 	var u model.User
 	err := r.db.Where("phone = ?", phone).First(&u).Error
+	return &u, err
+}
+
+func (r *LocalAuthRepository) FindUserByID(id uuid.UUID) (*model.User, error) {
+	var u model.User
+	err := r.db.Where("id = ?", id).First(&u).Error
 	return &u, err
 }
 

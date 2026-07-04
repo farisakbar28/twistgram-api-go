@@ -29,6 +29,15 @@ func getVisitor(ip string, r rate.Limit, b int) *rate.Limiter {
 
 	v, exists := visitors[ip]
 	if !exists {
+		// Proteksi dari memory leak bila diserang jutaan bot/IP spoofing
+		if len(visitors) > 10000 {
+			// Bersihkan paksa map secara asinkron jika terlalu penuh
+			go func() {
+				mtx.Lock()
+				for k := range visitors { delete(visitors, k) }
+				mtx.Unlock()
+			}()
+		}
 		limiter := rate.NewLimiter(r, b)
 		visitors[ip] = &clientVisitor{limiter: limiter, lastSeen: time.Now()}
 		return limiter
@@ -40,7 +49,7 @@ func getVisitor(ip string, r rate.Limit, b int) *rate.Limiter {
 
 func cleanupVisitors() {
 	for {
-		time.Sleep(time.Minute)
+		time.Sleep(3 * time.Minute)
 		mtx.Lock()
 		for ip, v := range visitors {
 			if time.Since(v.lastSeen) > 3*time.Minute {

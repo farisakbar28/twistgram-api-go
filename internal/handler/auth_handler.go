@@ -68,7 +68,23 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	if h.handleAuthError(c, h.authService.ResetPassword(req)) { return }
 	response.Success(c, gin.H{"message": "Password updated"})
 }
+
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	var req dto.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	res, err := h.authService.RefreshToken(req)
+	if h.handleAuthError(c, err) { return }
+	response.Success(c, res)
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Untuk stateless JWT, mekanisme logout utamanya dilakukan di frontend dengan menghapus token.
+	// Kita sediakan endpoint ini untuk konsistensi API contract.
+	response.Success(c, gin.H{"message": "Logged out successfully"})
+}
+
 func (h *AuthHandler) handleAuthError(c *gin.Context, err error) bool {
+
 	if err == nil { return false }
 	if errors.Is(err, service.ErrInvalidInput) { 
 		response.BadRequest(c, "Invalid request data") 
