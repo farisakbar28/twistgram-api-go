@@ -87,7 +87,9 @@ func (s *AuthService) CheckAvailability(req dto.CheckAvailabilityRequest) (*dto.
 }
 
 func (s *AuthService) ResetPassword(req dto.ResetPasswordRequest) error {
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.Token = strings.TrimSpace(req.Token)
-	if req.Token == "" || req.Password == "" { return ErrInvalidInput }
+	if req.Email == "" || req.Token == "" || req.Password == "" { return ErrInvalidInput }
+	if !isValidPassword(req.Password) { return errors.New("password must be at least 8 chars, contain an uppercase letter and a number/symbol") }
 	return s.repo.ResetPassword(req)
 }

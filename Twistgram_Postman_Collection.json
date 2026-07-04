@@ -145,7 +145,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"token\": \"654321\",\n  \"password\": \"NewPassword123!\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"token\": \"654321\",\n  \"password\": \"NewPassword123!\"\n}"
             }
           }
         }
@@ -892,6 +892,34 @@
               "path": [
                 "stories",
                 "feed"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Story",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stories/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stories",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "story-uuid"
+                }
               ]
             }
           }

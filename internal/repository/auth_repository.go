@@ -9,6 +9,7 @@ import (
 
 	"gorm.io/gorm"
 	"twistgram-api-go/internal/dto"
+	"twistgram-api-go/internal/model"
 )
 
 type AuthRepository interface {
@@ -42,7 +43,17 @@ func (r *SupabaseAuthRepository) Register(req dto.RegisterRequest) (*dto.AuthRes
 }
 
 func (r *SupabaseAuthRepository) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
-	payload := map[string]any{"email": req.Identifier, "password": req.Password}
+	identifier := req.Identifier
+	if !strings.Contains(identifier, "@") {
+		// Asumsikan username, cari emailnya di DB
+		var user model.User
+		if err := r.db.Where("username = ?", identifier).First(&user).Error; err != nil {
+			return nil, fmt.Errorf("supabase auth error: Invalid login credentials") // Samarkan error jika username ga ketemu
+		}
+		identifier = user.Email
+	}
+
+	payload := map[string]any{"email": identifier, "password": req.Password}
 	var out map[string]any
 	if err := r.post("/auth/v1/token?grant_type=password", payload, &out); err != nil { return nil, err }
 	return buildAuthResponse(out), nil
@@ -74,9 +85,43 @@ func (r *SupabaseAuthRepository) RecoverEmail(req dto.RecoverEmailRequest) error
 }
 
 func (r *SupabaseAuthRepository) ResetPassword(req dto.ResetPasswordRequest) error {
-	payload := map[string]any{"password": req.Password}
-	var out map[string]any
-	return r.post("/auth/v1/user", payload, &out)
+	// 1. Verify the recovery OTP to get an access token
+	verifyPayload := map[string]any{"email": req.Email, "token": req.Token, "type": "recovery"}
+	var verifyOut map[string]any
+	if err := r.post("/auth/v1/verify", verifyPayload, &verifyOut); err != nil { return err }
+	
+	accessToken, ok := verifyOut["access_token"].(string)
+	if !ok || accessToken == "" {
+		if session, ok := verifyOut["session"].(map[string]any); ok {
+			accessToken, _ = session["access_token"].(string)
+		}
+	}
+	if accessToken == "" { return fmt.Errorf("supabase auth error: invalid recovery token") }
+
+	// 2. Use the acquired access token to update the user's password
+	updatePayload := map[string]any{"password": req.Password}
+	
+	body, _ := json.Marshal(updatePayload)
+	httpReq, err := http.NewRequest(http.MethodPut, r.baseURL+"/auth/v1/user", bytes.NewReader(body))
+	if err != nil { return err }
+	httpReq.Header.Set("Content-Type", "application/json")
+	if r.authKey != "" {
+		httpReq.Header.Set("apikey", r.authKey)
+		httpReq.Header.Set("Authorization", "Bearer "+accessToken) // Gunakan token dari recovery!
+	}
+	
+	resp, err := r.httpClient.Do(httpReq)
+	if err != nil { return err }
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		var errResp map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&errResp)
+		msg := resp.Status
+		if msgDetail, ok := errResp["msg"].(string); ok { msg = msgDetail } else if msgDetail, ok := errResp["message"].(string); ok { msg = msgDetail }
+		return fmt.Errorf("supabase auth error: %s", msg)
+	}
+	
+	return nil
 }
 
 func (r *SupabaseAuthRepository) IsUsernameAvailable(username string) (bool, error) {
