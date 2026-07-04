@@ -1,111 +1,92 @@
-# Twistgram API
+# Twistgram API Backend (Go)
 
-Backend API untuk aplikasi media sosial Twistgram, dibangun dengan Go (Gin) + GORM + PostgreSQL (Supabase).
+Twistgram adalah platform media sosial berbasis foto, video, dan teks yang dirancang untuk memungkinkan pengguna terhubung, berbagi momen, dan menemukan konten yang relevan dengan minat masing-masing.
 
-## Tech Stack
+Repository ini memuat kode *Backend API* dari Twistgram yang dibangun menggunakan arsitektur **Layered Monolith** di atas ekosistem bahasa pemrograman **Go (Golang)**.
 
-- **Runtime:** Go 1.26
-- **Framework:** Gin
-- **ORM:** GORM
-- **Database:** PostgreSQL via Supabase
-- **Auth:** Supabase Auth (JWT validation)
-- **Storage:** Supabase Storage
+---
 
-## Struktur Folder
+## 🛠 Tech Stack & Prasyarat
+- **Bahasa**: Go 1.20+
+- **Framework API**: Gin Web Framework (`github.com/gin-gonic/gin`)
+- **Database ORM**: GORM (`gorm.io/gorm`)
+- **Basis Data**: PostgreSQL
+- **Kriptografi**: Bcrypt (`golang.org/x/crypto/bcrypt`) & JWT (`github.com/golang-jwt/jwt/v5`)
+- **Live Reload (Dev)**: Air (`github.com/air-verse/air`)
 
-```
-├── cmd/api/            # Entrypoint aplikasi
-├── internal/
-│   ├── config/         # Konfigurasi & koneksi database
-│   ├── handler/        # HTTP handler (controller)
-│   ├── service/        # Business logic
-│   ├── repository/     # Akses data via GORM
-│   ├── model/          # Model/GORM struct
-│   ├── middleware/     # Middleware (auth, CORS, dll)
-│   └── dto/            # Request/response DTO
-├── pkg/response/       # Format response konsisten
-├── migrations/         # SQL migration files
-├── .env.example        # Template environment variables
-└── go.mod / go.sum
-```
+## 📦 Panduan Instalasi & Konfigurasi
 
-## Cara Install & Run
-
-### 1. Prerequisites
-
-- Go 1.26+
-- PostgreSQL (via Supabase)
-
-### 2. Clone & Setup
-
+### 1. Kloning Repository
 ```bash
-git clone <repo-url>
+git clone https://github.com/farisakbar28/twistgram-api-go.git
 cd twistgram-api-go
 ```
 
-### 3. Environment Variables
-
-Salin `.env.example` ke `.env` dan isi kredensial:
-
+### 2. Instalasi Dependencies
 ```bash
-cp .env.example .env
-```
-
-Isi variabel berikut di `.env`:
-
-| Variable              | Description                          |
-|-----------------------|--------------------------------------|
-| `DATABASE_URL`        | Connection string ke Supabase Postgres (session pooler) |
-| `SUPABASE_URL`        | URL project Supabase                 |
-| `SUPABASE_JWT_SECRET` | JWT secret untuk validasi token      |
-| `PORT`                | Port server (default: 8080)          |
-
-### 4. Run
-
-```bash
-go run cmd/api/main.go
-```
-
-Server akan berjalan di `http://localhost:8080`.
-
-### 5. Verifikasi
-
-```bash
-curl http://localhost:8080/health
-```
-
-Response sukses:
-```json
-{
-  "success": true,
-  "message": "Success",
-  "data": {
-    "status": "ok",
-    "database": "connected",
-    "timestamp": "2026-06-21T21:30:00+08:00"
-  }
-}
-```
-
-## API Documentation
-
-Dokumentasi API lengkap tersedia di Postman Collection (lihat folder `migrations/` untuk referensi, koleksi Postman akan ditambahkan di fase akhir).
-
-## Development
-
-### Menambahkan Dependencies
-
-```bash
-go get <package-name>
 go mod tidy
 ```
 
-### Build
-
+### 3. Konfigurasi Environment Variables
+Salin berkas referensi `env` ke berkas asli yang akan dibaca sistem.
 ```bash
-go build -o bin/api cmd/api/main.go
+cp .env.example .env
+```
+Buka berkas `.env` yang baru dibuat dan isi informasi kredensial yang dibutuhkan, khususnya:
+- `DATABASE_URL`: String koneksi PostgreSQL.
+- `SUPABASE_JWT_SECRET`: Dibutuhkan oleh middleware API & generator token untuk HMAC-SHA256 signature.
+- Konfigurasi `SMTP_*` jika ingin OTP dikirimkan via email (Bila kosong, OTP akan di-print ke Console *stdout*).
+
+### 4. Database Migration & Schema Setup
+Aplikasi memiliki kapabilitas `AutoMigrate` melalui GORM saat pertama kali *startup*. Namun, pastikan Anda mengeksekusi DDL script yang berada di dalam folder `migrations/` berurutan pada _SQL Editor_ DB Anda guna menyesuaikan _Triggers_, struktur khusus OTP, dan membuang struktur lama (sinkronisasi GoTrue) jika sebelumnya pernah menggunakan *Supabase Auth External*.
+
+---
+
+## 🚀 Instruksi Menjalankan Aplikasi & Test
+
+Kami menyediakan *helper script* (`run.sh`) untuk mempermudah operasional CLI:
+
+**1. Menjalankan Server (Development dengan Live-Reload)**
+*Membutuhkan `Air` terinstal secara global di mesin Anda.*
+```bash
+./run.sh start
 ```
 
-## License
+**2. Menjalankan Server (Standar / Production)**
+```bash
+./run.sh run
+# ATAU untuk proses build manual:
+./run.sh build
+./twistgram-api
+```
+Server secara default akan mendengarkan _port_ `8080` (`http://localhost:8080`).
 
-Proyek ini dikembangkan sebagai portofolio.
+**3. Eksekusi Pengujian Otomatis (Unit Test)**
+```bash
+./run.sh test
+```
+
+---
+
+## 📂 Peta Arsitektur Proyek
+Struktur lapisan diadaptasi untuk skalabilitas yang baik (*separation of concerns*):
+
+```text
+twistgram-api-go/
+├── cmd/api/                  # Titik masuk utama aplikasi (main.go), inisiasi DB & router.
+├── docs/                     # Dokumentasi sistem (SRS & TDD).
+├── internal/
+│   ├── config/               # Struktur env variabel dan konfigurasi aplikasi.
+│   ├── dto/                  # Data Transfer Objects (Payload requests & responses).
+│   ├── handler/              # HTTP Controller/Handler (Menerima input dari jaringan).
+│   ├── middleware/           # Proteksi rute (JWT Auth, Security Headers, Rate Limiter).
+│   ├── model/                # Entity database & GORM Tags mapping.
+│   ├── repository/           # Lapisan interaksi database (Query GORM & Transaction).
+│   └── service/              # Core Business Logic (Verifikasi aturan/batas fitur).
+├── migrations/               # Repositori skrip SQL (DDL PostgreSQL).
+├── pkg/
+│   ├── auth/                 # Utilitas enkripsi Bcrypt, OTP & penandatanganan JWT.
+│   ├── mailer/               # Utilitas transporter SMTP.
+│   └── response/             # Standardisasi cetak HTTP Response JSON.
+└── Twistgram_Postman_Collection.json # Postman Collection lengkap yang siap untuk di-import.
+```

@@ -275,7 +275,7 @@ Pembagian ini ditandai secara konsisten di seluruh dokumen menggunakan label [MV
 | --- | --- | --- |
 | Backend API | Go (Golang) | REST API, dapat dikembangkan dengan framework seperti Fiber/Echo/Gin |
 | Database | PostgreSQL (via Supabase) | Relational database utama |
-| Auth | Supabase Auth | Manajemen sesi, JWT, OTP email/SMS |
+| Auth | Custom Internal Auth | Go JWT & Bcrypt, SMTP Email OTP |
 | File Storage | Supabase Storage | Penyimpanan foto, video, audio story |
 | Realtime | Supabase Realtime | Notifikasi live, chat, status online |
 | Frontend Web | React.js | Aplikasi web utama (prioritas pertama) |
@@ -315,7 +315,7 @@ Catatan desain: nomor telepon bersifat opsional pada saat registrasi, namun sist
 
 - **[MVP] **Validasi kredensial dengan pesan error yang aman (tidak membocorkan apakah email/username terdaftar atau tidak — demi keamanan, gunakan pesan generik “kredensial tidak valid”).
 
-- **[MVP] **Sesi login menggunakan JWT (access token + refresh token) yang dikelola oleh Supabase Auth.
+- **[MVP] **Sesi login menggunakan JWT (access token + refresh token) yang dikelola oleh modul Service internal Golang.
 
 - **[ADV] **Manajemen sesi aktif: pengguna dapat melihat daftar device yang sedang login dan melakukan logout jarak jauh dari device tertentu.
 
@@ -643,14 +643,15 @@ Fitur real-time (status online, typing indicator, pesan masuk instan) direkomend
 
 # 10. Desain Basis Data (Skema Tingkat ERD)
 
-Skema berikut menggunakan pendekatan relational (PostgreSQL/Supabase). Tipe data ditulis dalam notasi umum PostgreSQL. Seluruh tabel menggunakan primary key bertipe UUID untuk konsistensi dengan Supabase Auth, dan menerapkan soft delete (kolom deleted_at) pada entitas yang relevan.
+Skema berikut menggunakan pendekatan relational (PostgreSQL/Supabase). Tipe data ditulis dalam notasi umum PostgreSQL. Seluruh tabel menggunakan primary key bertipe UUID untuk keamanan dan arsitektur database modern, dan menerapkan soft delete (kolom deleted_at) pada entitas yang relevan.
 
 ## 10.1 Tabel: users
 
 | **Kolom** | **Tipe** | **Keterangan** |
 | --- | --- | --- |
-| id | UUID (PK) | Mengikuti id dari Supabase Auth |
+| id | UUID (PK) | Primary Key (Auto-generated UUID) |
 | name | VARCHAR | Nama lengkap |
+| password_hash | VARCHAR | Hash kata sandi internal (Bcrypt) |
 | username | VARCHAR (UNIQUE) | Username, unik |
 | email | VARCHAR (UNIQUE) | Email, unik |
 | phone | VARCHAR, NULLABLE | Nomor telepon, opsional |
@@ -661,6 +662,18 @@ Skema berikut menggunakan pendekatan relational (PostgreSQL/Supabase). Tipe data
 | is_private | BOOLEAN, DEFAULT false | Status akun privat/publik |
 | created_at | TIMESTAMP |  |
 | updated_at | TIMESTAMP |  |
+
+## 10.1a Tabel: auth_otps
+Menyimpan token verifikasi (OTP) untuk modul registrasi dan pemulihan kata sandi (Self-Hosted Auth).
+
+| **Kolom** | **Tipe** | **Keterangan** |
+| --- | --- | --- |
+| id | UUID (PK) | Auto-generated UUID |
+| user_id | UUID (FK) | Berelasi ke tabel users |
+| code | VARCHAR(6) | 6-digit angka OTP |
+| type | VARCHAR | Jenis OTP (signup, recovery) |
+| expires_at | TIMESTAMPTZ | Batas kadaluwarsa token |
+| created_at | TIMESTAMPTZ | - |
 
 ## 10.2 Tabel: user_interests
 
@@ -1006,7 +1019,7 @@ Twistgram menggunakan arsitektur layered monolith pada Fase MVP — satu service
 
 - Rate limiting pada endpoint login, register, dan OTP untuk mencegah brute-force.
 
-- Password di-hash menggunakan bcrypt/argon2 (ditangani otomatis oleh Supabase Auth).
+- Password di-hash menggunakan bcrypt/argon2 (ditangani mandiri menggunakan library Golang x/crypto/bcrypt).
 
 - Validasi tipe & ukuran file saat upload media untuk mencegah upload file berbahaya.
 
@@ -1131,3 +1144,6 @@ Dokumen ini bersifat hidup (living document) — disarankan untuk diperbarui sei
 | 1.0 | Juni 2026 | Dokumen awal — hasil analisis kebutuhan & gap analysis terhadap aplikasi media sosial existing |
 
 Halaman 5 dari 6
+
+
+
