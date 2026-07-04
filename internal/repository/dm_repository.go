@@ -1,12 +1,8 @@
 package repository
 
 import (
-	"errors"
-	"time"
-
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"twistgram-api-go/internal/model"
 )
 
@@ -93,7 +89,3 @@ func (r *GormDMRepository) FindConversationByID(id uuid.UUID) (*model.Conversati
 	if err := r.db.First(&c, "id = ?", id).Error; err != nil { return nil, err }
 	return &c, nil
 }
-
-func (r *GormDMRepository) _unused(time.Time) {}
-var _ = errors.New
-var _ = clause.OnConflict{}
