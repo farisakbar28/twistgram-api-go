@@ -273,6 +273,10 @@ func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthRespon
 	if req.RefreshToken == "" { return nil, ErrInvalidInput }
 
 	token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		// Validasi algoritma untuk mencegah "None" algorithm attack
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
 		return []byte(s.cfg.SupabaseJWTSecret), nil
 	})
 
@@ -281,8 +285,13 @@ func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthRespon
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || claims["type"] != "refresh" { return nil, errors.New("invalid token type") }
 
-	sub, ok := claims["sub"].(string)
-	if !ok { return nil, errors.New("invalid token payload") }
+	var sub string
+	switch v := claims["sub"].(type) {
+	case string:
+		sub = v
+	default:
+		return nil, errors.New("invalid token payload")
+	}
 
 	userID, err := uuid.Parse(sub)
 	if err != nil { return nil, errors.New("invalid user id in token") }
