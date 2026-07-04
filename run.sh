@@ -19,7 +19,7 @@ case "$1" in
         echo "Starting Twistgram API with Air (live reload)..."
         if ! command -v air &> /dev/null; then
             echo "Air is not installed. Installing..."
-            go install github.com/cosmtrek/air@latest
+            go install github.com/air-verse/air@latest
         fi
         air
         ;;
