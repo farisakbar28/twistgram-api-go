@@ -92,6 +92,8 @@ func main() {
 	socialHandler := handler.NewSocialHandler()
 	postHandler := handler.NewPostHandler()
 	interactionHandler := handler.NewInteractionHandler()
+	storyHandler := handler.NewStoryHandler()
+	searchHandler := handler.NewSearchHandler()
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
@@ -123,6 +125,12 @@ func main() {
 		auth.POST("/posts/:id/comments/:comment_id/like", interactionHandler.LikeComment)
 		auth.POST("/posts/:id/save", interactionHandler.SavePost)
 		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
+		auth.POST("/stories", storyHandler.Create)
+		auth.GET("/stories/feed", storyHandler.Feed)
+		auth.GET("/stories/:id", storyHandler.GetByID)
+		auth.POST("/stories/:id/views", storyHandler.RecordView)
+		auth.GET("/stories/:id/viewers", storyHandler.Viewers)
+		auth.GET("/search", searchHandler.Search)
 	}
 
 	// Start server
