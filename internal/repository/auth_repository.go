@@ -118,8 +118,22 @@ func (r *SupabaseAuthRepository) post(path string, payload any, out any) error {
 
 func buildAuthResponse(out map[string]any) *dto.AuthResponse {
 	resp := &dto.AuthResponse{Message: "Success"}
-	if user, ok := out["user"].(map[string]any); ok { resp.User = dto.AuthUserResponse{ID: fmt.Sprint(user["id"]), Email: fmt.Sprint(user["email"])} }
-	if session, ok := out["session"].(map[string]any); ok { resp.Session = &dto.AuthSessionResponse{AccessToken: fmt.Sprint(session["access_token"]), RefreshToken: fmt.Sprint(session["refresh_token"]), TokenType: fmt.Sprint(session["token_type"])} }
+	if user, ok := out["user"].(map[string]any); ok {
+		resp.User = dto.AuthUserResponse{ID: fmt.Sprint(user["id"]), Email: fmt.Sprint(user["email"])}
+	} else if id, ok := out["id"]; ok {
+		resp.User = dto.AuthUserResponse{ID: fmt.Sprint(id), Email: fmt.Sprint(out["email"])}
+	}
+
+	if session, ok := out["session"].(map[string]any); ok {
+		resp.Session = &dto.AuthSessionResponse{AccessToken: fmt.Sprint(session["access_token"]), RefreshToken: fmt.Sprint(session["refresh_token"]), TokenType: fmt.Sprint(session["token_type"])}
+	} else if at, ok := out["access_token"]; ok {
+		resp.Session = &dto.AuthSessionResponse{AccessToken: fmt.Sprint(at), RefreshToken: fmt.Sprint(out["refresh_token"]), TokenType: fmt.Sprint(out["token_type"])}
+	}
+
+	if resp.User.ID == "<nil>" { resp.User.ID = "" }
+	if resp.User.Email == "<nil>" { resp.User.Email = "" }
+
 	return resp
 }
+
 
