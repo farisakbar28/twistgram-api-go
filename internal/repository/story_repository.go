@@ -18,6 +18,7 @@ type StoryRepository interface {
 	ListViewers(storyID uuid.UUID) ([]model.StoryView, error)
 	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
 	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
+	DeleteStory(id uuid.UUID, userID uuid.UUID) error
 	GetStoryOwner(storyID uuid.UUID) (uuid.UUID, error)
 }
 
@@ -51,6 +52,23 @@ func (r *GormStoryRepository) ListActiveFeedStories(userID uuid.UUID) ([]model.S
 		Order("stories.created_at DESC").
 		Find(&stories).Error
 	return stories, err
+}
+
+func (r *GormStoryRepository) DeleteStory(id uuid.UUID, userID uuid.UUID) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Validasi ownership
+		var count int64
+		if err := tx.Model(&model.Story{}).Where("id = ? AND user_id = ?", id, userID).Count(&count).Error; err != nil { return err }
+		if count == 0 { return gorm.ErrRecordNotFound }
+
+		// Manual cascade
+		if err := tx.Where("story_id = ?", id).Delete(&model.StoryView{}).Error; err != nil { return err }
+		if err := tx.Where("story_id = ?", id).Delete(&model.StoryTag{}).Error; err != nil { return err }
+		if err := tx.Model(&model.Message{}).Where("reply_to_story_id = ?", id).Update("reply_to_story_id", nil).Error; err != nil { return err }
+
+		// Delete story
+		return tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Story{}).Error
+	})
 }
 
 func (r *GormStoryRepository) DeleteExpiredStories() error {

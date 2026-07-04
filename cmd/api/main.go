@@ -49,6 +49,7 @@ func main() {
 		&model.Message{},
 		&model.Notification{},
 		&model.Report{},
+		&model.AuthOTP{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to run migration: %v", err)
@@ -97,8 +98,8 @@ func main() {
 	v1 := r.Group("/api/v1")
 
 	// Public routes (no auth required)
-	authRepo := repository.NewAuthRepository(db, cfg.SupabaseURL, cfg.SupabaseAnonKey)
-	authHandler := handler.NewAuthHandlerWithService(service.NewAuthService(authRepo))
+	authRepo := repository.NewAuthRepository(db)
+	authHandler := handler.NewAuthHandlerWithService(service.NewAuthService(authRepo, cfg))
 	public := v1.Group("")
 	// Apply rate limiting to public endpoints (5 req/sec, burst 10)
 	public.Use(middleware.RateLimit(5, 10))
@@ -160,6 +161,7 @@ func main() {
 		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
 		auth.POST("/posts/:id/share", interactionHandler.SharePost)
 		auth.POST("/stories", storyHandler.Create)
+		auth.DELETE("/stories/:id", storyHandler.Delete)
 		auth.GET("/stories/feed", storyHandler.Feed)
 		auth.GET("/stories/:id", storyHandler.GetByID)
 		auth.POST("/stories/:id/views", storyHandler.RecordView)

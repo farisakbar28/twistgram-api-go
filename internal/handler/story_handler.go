@@ -28,6 +28,13 @@ func (h *StoryHandler) Create(c *gin.Context) {
 	response.Created(c, gin.H{"story": res})
 }
 
+func (h *StoryHandler) Delete(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	storyID, ok := parseStoryID(c); if !ok { return }
+	if h.handleError(c, h.service.Delete(userID, storyID)) { return }
+	response.Success(c, gin.H{"deleted": true})
+}
+
 func (h *StoryHandler) GetByID(c *gin.Context) {
 	userID, ok := authUser(c); if !ok { return }
 	storyID, ok := parseStoryID(c); if !ok { return }

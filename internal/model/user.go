@@ -13,6 +13,7 @@ type User struct {
 	Name           string     `gorm:"type:varchar(255);not null" json:"name"`
 	Username       string     `gorm:"type:varchar(255);uniqueIndex;not null" json:"username"`
 	Email          string     `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	PasswordHash   *string    `gorm:"type:varchar(255);null" json:"-"` // Added for self-hosted auth
 	Phone          *string    `gorm:"type:varchar(50);null" json:"phone,omitempty"`
 	PhoneVerified  bool       `gorm:"default:false" json:"phone_verified"`
 	EmailVerified  bool       `gorm:"default:false" json:"email_verified"`

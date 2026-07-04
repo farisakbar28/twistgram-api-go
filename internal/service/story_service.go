@@ -59,6 +59,17 @@ func (s *StoryService) GetByID(viewerID, storyID uuid.UUID) (*dto.StoryResponse,
 	return buildStoryResponse(story), nil
 }
 
+func (s *StoryService) Delete(userID, storyID uuid.UUID) error {
+	if userID == uuid.Nil || storyID == uuid.Nil { return ErrInvalidInput }
+	ownerID, err := s.repo.GetStoryOwner(storyID)
+	if errors.Is(err, gorm.ErrRecordNotFound) { return ErrStoryNotFound }
+	if err != nil { return err }
+	if ownerID != userID { return ErrForbidden }
+	
+	if err := s.repo.DeleteStory(storyID, userID); err != nil { return err }
+	return nil
+}
+
 func (s *StoryService) Feed(userID uuid.UUID) ([]dto.StoryFeedItem, error) {
 	stories, err := s.repo.ListActiveFeedStories(userID)
 	if err != nil { return nil, err }
