@@ -41,6 +41,17 @@ func (s *StoryService) Create(userID uuid.UUID, req dto.CreateStoryRequest) (*dt
 		tags = append(tags, model.StoryTag{TaggedUserID: parsed})
 	}
 	if err := s.repo.CreateStoryWithTags(story, tags); err != nil { return nil, err }
+
+	// CNT-05: Send notification to tagged users
+	for _, tag := range tags {
+		_ = s.repo.CreateNotification(&model.Notification{
+			RecipientID: tag.TaggedUserID,
+			ActorID:     userID,
+			Type:        "mention",
+			ReferenceID: &story.ID,
+		})
+	}
+
 	return buildStoryResponse(story), nil
 }
 

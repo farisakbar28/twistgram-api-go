@@ -195,6 +195,50 @@ func (s *SocialService) Report(reporterID uuid.UUID, req dto.ReportRequest) (*dt
 	return &dto.ReportResponse{ID: report.ID.String(), TargetType: report.TargetType, TargetID: report.TargetID.String(), Reason: report.Reason, Status: report.Status, CreatedAt: report.CreatedAt}, nil
 }
 
+func (s *SocialService) GetBlockedUsers(viewerID uuid.UUID) ([]dto.SocialUserResponse, error) {
+	blocks, err := s.repo.FindBlocksByBlocker(viewerID)
+	if err != nil { return nil, err }
+	out := make([]dto.SocialUserResponse, 0, len(blocks))
+	for _, b := range blocks {
+		out = append(out, buildSocialUser(b.Blocked))
+	}
+	return out, nil
+}
+
+// Close Friends
+
+func (s *SocialService) AddCloseFriend(userID, targetID uuid.UUID) error {
+	if userID == targetID {
+		return ErrSelfAction
+	}
+	if err := s.ensureUserExists(targetID); err != nil {
+		return err
+	}
+	return s.repo.SetCloseFriend(userID, targetID, true)
+}
+
+func (s *SocialService) RemoveCloseFriend(userID, targetID uuid.UUID) error {
+	if userID == targetID {
+		return ErrSelfAction
+	}
+	if err := s.ensureUserExists(targetID); err != nil {
+		return err
+	}
+	return s.repo.SetCloseFriend(userID, targetID, false)
+}
+
+func (s *SocialService) ListCloseFriends(userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
+	if err := s.ensureUserExists(userID); err != nil {
+		return nil, nil, err
+	}
+	page, limit = normalizePagination(page, limit)
+	users, total, err := s.repo.ListCloseFriends(userID, page, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+	return buildSocialUsers(users), buildMeta(page, limit, total), nil
+}
+
 func (s *SocialService) EnsureProfileVisible(viewerID, targetID uuid.UUID) error {
 	if viewerID == uuid.Nil || viewerID == targetID {
 		return nil

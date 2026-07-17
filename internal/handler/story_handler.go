@@ -5,18 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type StoryHandler struct{ service *service.StoryService }
 
-func NewStoryHandler() *StoryHandler {
-	repo := repository.NewStoryRepository(config.GetDB())
-	return &StoryHandler{service: service.NewStoryService(repo)}
+func NewStoryHandlerWithService(svc *service.StoryService) *StoryHandler {
+	return &StoryHandler{service: svc}
 }
 
 func (h *StoryHandler) Create(c *gin.Context) {

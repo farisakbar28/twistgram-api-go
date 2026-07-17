@@ -13,6 +13,7 @@ type StoryRepository interface {
 	CreateStoryWithTags(story *model.Story, tags []model.StoryTag) error
 	GetStoryByID(id uuid.UUID) (*model.Story, error)
 	ListActiveFeedStories(userID uuid.UUID) ([]model.Story, error)
+	FindActiveStoryByUserID(userID uuid.UUID) (*model.Story, error)
 	DeleteExpiredStories() error
 	RecordView(view *model.StoryView) error
 	ListViewers(storyID uuid.UUID) ([]model.StoryView, error)
@@ -20,6 +21,7 @@ type StoryRepository interface {
 	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
 	DeleteStory(id uuid.UUID, userID uuid.UUID) error
 	GetStoryOwner(storyID uuid.UUID) (uuid.UUID, error)
+	CreateNotification(notification *model.Notification) error
 }
 
 type GormStoryRepository struct{ db *gorm.DB }
@@ -71,6 +73,12 @@ func (r *GormStoryRepository) DeleteStory(id uuid.UUID, userID uuid.UUID) error 
 	})
 }
 
+func (r *GormStoryRepository) FindActiveStoryByUserID(userID uuid.UUID) (*model.Story, error) {
+	var s model.Story
+	err := r.db.Where("user_id = ? AND expires_at > ?", userID, time.Now()).First(&s).Error
+	return &s, err
+}
+
 func (r *GormStoryRepository) DeleteExpiredStories() error {
 	return r.db.Where("expires_at <= ?", time.Now()).Delete(&model.Story{}).Error
 }
@@ -107,4 +115,8 @@ func (r *GormStoryRepository) GetStoryOwner(storyID uuid.UUID) (uuid.UUID, error
 	var s model.Story
 	if err := r.db.Select("user_id").First(&s, "id = ?", storyID).Error; err != nil { return uuid.Nil, err }
 	return s.UserID, nil
+}
+
+func (r *GormStoryRepository) CreateNotification(notification *model.Notification) error {
+	return r.db.Create(notification).Error
 }

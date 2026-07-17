@@ -6,19 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/middleware"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type PostHandler struct{ postService *service.PostService }
 
-func NewPostHandler() *PostHandler {
-	repo := repository.NewPostRepository(config.GetDB())
-	return &PostHandler{postService: service.NewPostService(repo)}
+func NewPostHandlerWithService(svc *service.PostService) *PostHandler {
+	return &PostHandler{postService: svc}
 }
 
 func (h *PostHandler) Create(c *gin.Context) {
@@ -78,10 +75,33 @@ func (h *PostHandler) Delete(c *gin.Context) {
 	response.Success(c, gin.H{"deleted": true})
 }
 
+func (h *PostHandler) GetByID(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	postID, ok := parsePostID(c); if !ok { return }
+	res, err := h.postService.GetByID(userID, postID)
+	if err != nil {
+		if errors.Is(err, service.ErrPostNotFound) { response.NotFound(c, "Post not found") } else { response.InternalError(c, "Failed to load post") }
+		return
+	}
+	response.Success(c, gin.H{"post": res})
+}
+
+func (h *PostHandler) RemoveTag(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	postID, ok := parsePostID(c); if !ok { return }
+	taggedUserIDStr := c.Param("taggedUserId")
+	taggedUserID, err := uuid.Parse(taggedUserIDStr)
+	if err != nil { response.BadRequest(c, "Invalid tagged user id"); return }
+	if err := h.postService.RemoveTag(userID, postID, taggedUserID); err != nil {
+		if errors.Is(err, service.ErrPostNotFound) { response.NotFound(c, "Post not found") } else if errors.Is(err, service.ErrForbidden) { response.Forbidden(c, "You do not own this post") } else { response.InternalError(c, "Failed to remove tag") }
+		return
+	}
+	response.Success(c, gin.H{"removed": true})
+}
+
 func authUser(c *gin.Context) (uuid.UUID, bool) { id := middleware.GetUserID(c); if id == "" { response.Unauthorized(c, "User not authenticated"); return uuid.Nil, false }; parsed, err := uuid.Parse(id); if err != nil { response.Unauthorized(c, "Invalid authenticated user"); return uuid.Nil, false }; return parsed, true }
 func parsePostID(c *gin.Context) (uuid.UUID, bool) { id, err := uuid.Parse(c.Param("id")); if err != nil { response.BadRequest(c, "Invalid post id"); return uuid.Nil, false }; return id, true }
 func page(c *gin.Context) int { p, _ := strconv.Atoi(c.DefaultQuery("page", "1")); if p < 1 { return 1 }; return p }
 func limit(c *gin.Context) int { l, _ := strconv.Atoi(c.DefaultQuery("limit", "20")); if l < 1 { return 20 }; if l > 100 { return 100 }; return l }
 func buildMeta(page, limit int, total int64) *response.Meta { totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }; return &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages} }
 
-var _ = errors.New

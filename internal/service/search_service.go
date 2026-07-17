@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 
+	"github.com/google/uuid"
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/model"
 	"twistgram-api-go/internal/repository"
@@ -22,6 +23,17 @@ func (s *SearchService) Search(viewerID, query string, limit int) (*dto.SearchRe
 	hashtags, err := s.repo.SearchHashtags(viewerID, q, limit)
 	if err != nil { return nil, err }
 	return &dto.SearchResponse{Users: buildSearchUsers(users), Hashtags: buildSearchHashtags(hashtags)}, nil
+}
+
+func (s *SearchService) GetHashtagPosts(tag string, viewerID string, page, limit int) ([]dto.PostResponse, int64, error) {
+	if page < 1 { page = 1 }
+	if limit < 1 { limit = 20 }
+	if limit > 100 { limit = 100 }
+	var vid uuid.UUID
+	if viewerID != "" { vid, _ = uuid.Parse(viewerID) }
+	posts, total, err := s.repo.ListPostsByHashtag(tag, vid, page, limit)
+	if err != nil { return nil, 0, err }
+	return buildPosts(posts), total, nil
 }
 
 func buildSearchUsers(users []model.User) []dto.SearchUserItem {

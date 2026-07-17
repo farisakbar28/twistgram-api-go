@@ -12,6 +12,7 @@ import (
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/model"
 	"twistgram-api-go/internal/repository"
+	"twistgram-api-go/pkg/auth"
 )
 
 var (
@@ -19,6 +20,8 @@ var (
 	ErrUserNotFound          = errors.New("user not found")
 	ErrUsernameTaken         = errors.New("username already taken")
 	ErrUsernameChangeLimited = errors.New("username can only be changed once per month")
+	ErrPasswordRequired      = errors.New("password is required to delete account")
+	ErrWrongPassword         = errors.New("incorrect password")
 )
 
 var usernamePattern = regexp.MustCompile(`^[a-z0-9_]{3,30}$`)
@@ -138,6 +141,23 @@ func (s *UserService) ensureUserExists(userID uuid.UUID) error {
 	_, err := s.repo.FindByID(userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) { return ErrUserNotFound }
 	return err
+}
+
+func (s *UserService) DeleteAccount(userID uuid.UUID, password string) error {
+	if userID == uuid.Nil || password == "" {
+		return ErrInvalidInput
+	}
+	user, err := s.repo.FindByID(userID)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrUserNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if user.PasswordHash == nil || !auth.CheckPasswordHash(password, *user.PasswordHash) {
+		return ErrWrongPassword
+	}
+	return s.repo.DeleteUser(userID)
 }
 
 func (s *UserService) UpdatePrivacy(userID uuid.UUID, req dto.UpdatePrivacyRequest) (*dto.UserProfileResponse, error) {

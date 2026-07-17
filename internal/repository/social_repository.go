@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"errors"
-
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -21,6 +19,7 @@ type SocialRepository interface {
 	UpdateFollowStatus(followerID, followingID uuid.UUID, status string) error
 	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
 	FindBlock(blockerID, blockedID uuid.UUID) (*model.Block, error)
+	FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error)
 	CreateBlock(block *model.Block) error
 	DeleteBlock(blockerID, blockedID uuid.UUID) error
 	CreateReport(report *model.Report) error
@@ -28,6 +27,10 @@ type SocialRepository interface {
 	PostExists(id uuid.UUID) (bool, error)
 	CommentExists(id uuid.UUID) (bool, error)
 	CreateNotification(notification *model.Notification) error
+	// Close Friends
+	SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error
+	ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error)
+	IsCloseFriend(userID, targetID uuid.UUID) (bool, error)
 }
 
 type GormSocialRepository struct {
@@ -141,6 +144,12 @@ func (r *GormSocialRepository) DeleteBlock(blockerID, blockedID uuid.UUID) error
 	return r.db.Where("blocker_id = ? AND blocked_id = ?", blockerID, blockedID).Delete(&model.Block{}).Error
 }
 
+func (r *GormSocialRepository) FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error) {
+	var blocks []model.Block
+	err := r.db.Where("blocker_id = ?", blockerID).Preload("Blocked").Find(&blocks).Error
+	return blocks, err
+}
+
 func (r *GormSocialRepository) CreateReport(report *model.Report) error {
 	return r.db.Create(report).Error
 }
@@ -163,6 +172,38 @@ func (r *GormSocialRepository) CommentExists(id uuid.UUID) (bool, error) {
 	return count > 0, err
 }
 
-func IsNotFound(err error) bool {
-	return errors.Is(err, gorm.ErrRecordNotFound)
+// Close Friends implementation
+
+func (r *GormSocialRepository) SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error {
+	// Verify follower->following relationship exists and is accepted
+	var follow model.Follow
+	err := r.db.Where("follower_id = ? AND following_id = ? AND status = ?", followerID, followingID, "accepted").First(&follow).Error
+	if err != nil {
+		return err
+	}
+	return r.db.Model(&model.Follow{}).
+		Where("follower_id = ? AND following_id = ?", followerID, followingID).
+		Update("is_close_friend", isCloseFriend).Error
+}
+
+func (r *GormSocialRepository) ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+	// Close friends are people WHO FOLLOWED the user and marked is_close_friend
+	var total int64
+	query := r.db.Model(&model.User{}).
+		Joins("JOIN follows ON follows.follower_id = users.id").
+		Where("follows.following_id = ? AND follows.status = ? AND follows.is_close_friend = ?", userID, "accepted", true)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var users []model.User
+	err := query.Order("follows.created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&users).Error
+	return users, total, err
+}
+
+func (r *GormSocialRepository) IsCloseFriend(userID, targetID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.Follow{}).
+		Where("follower_id = ? AND following_id = ? AND status = ? AND is_close_friend = ?", userID, targetID, "accepted", true).
+		Count(&count).Error
+	return count > 0, err
 }

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -15,7 +14,6 @@ type PostRepository interface {
 	UpdateCaption(id uuid.UUID, userID uuid.UUID, caption *string) error
 	GetPostByID(id uuid.UUID) (*model.Post, error)
 
-
 	GetPostWithMedia(id uuid.UUID) (*model.Post, error)
 	UpdatePost(post *model.Post) error
 	ListFeed(userID uuid.UUID, page, limit int) ([]model.Post, int64, error)
@@ -26,9 +24,8 @@ type PostRepository interface {
 	PostExists(id uuid.UUID) (bool, error)
 	OwnsPost(id, userID uuid.UUID) (bool, error)
 	UserHashtagUpsert(tags []string) ([]model.Hashtag, error)
-	ReplacePostHashtags(postID uuid.UUID, hashtags []model.Hashtag) error
-	ReplacePostTags(postID uuid.UUID, taggedUserIDs []uuid.UUID) error
 	CreateNotification(notification *model.Notification) error
+	DeletePostTag(postID, taggedUserID uuid.UUID) error
 }
 
 type GormPostRepository struct{ db *gorm.DB }
@@ -99,7 +96,7 @@ func (r *GormPostRepository) ListFeed(userID uuid.UUID, page, limit int) ([]mode
 	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
 	var posts []model.Post
 	if total == 0 { return posts, 0, nil } // Fallback handled by service
-	err := query.Preload("Media").Order("posts.created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&posts).Error
+	err := query.Preload("User").Preload("Media").Preload("Tags").Preload("Hashtags").Order("posts.created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -110,7 +107,7 @@ func (r *GormPostRepository) ListGlobalFeed(limit int) ([]model.Post, int64, err
 		Where("posts.deleted_at IS NULL AND posts.is_archived = false AND u.is_private = false")
 	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
 	var posts []model.Post
-	err := query.Preload("Media").Order("posts.created_at DESC").Limit(limit).Find(&posts).Error
+	err := query.Preload("User").Preload("Media").Order("posts.created_at DESC").Limit(limit).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -124,10 +121,22 @@ func (r *GormPostRepository) ListUserPosts(userID uuid.UUID, page, limit int) ([
 }
 
 func (r *GormPostRepository) DeletePost(id uuid.UUID, userID uuid.UUID) error {
-	res := r.db.Model(&model.Post{}).Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).Update("deleted_at", gorm.Expr("now()"))
-	if res.Error != nil { return res.Error }
-	if res.RowsAffected == 0 { return gorm.ErrRecordNotFound }
-	return nil
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Verify ownership first
+		var count int64
+		if err := tx.Model(&model.Post{}).Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).Count(&count).Error; err != nil { return err }
+		if count == 0 { return gorm.ErrRecordNotFound }
+
+		// Soft-delete related records
+		_ = tx.Where("post_id = ?", id).Delete(&model.Like{}).Error
+		_ = tx.Where("post_id = ?", id).Delete(&model.Comment{}).Error
+		_ = tx.Where("post_id = ?", id).Delete(&model.SavedPost{}).Error
+		_ = tx.Where("post_id = ?", id).Delete(&model.PostTag{}).Error
+		_ = tx.Where("post_id = ?", id).Delete(&model.PostHashtag{}).Error
+
+		// Soft-delete the post itself
+		return tx.Model(&model.Post{}).Where("id = ? AND deleted_at IS NULL", id).Update("deleted_at", gorm.Expr("now()")).Error
+	})
 }
 
 func (r *GormPostRepository) SetArchived(id uuid.UUID, userID uuid.UUID, archived bool) error {
@@ -165,11 +174,10 @@ func (r *GormPostRepository) UserHashtagUpsert(tags []string) ([]model.Hashtag, 
 	return out, nil
 }
 
-func (r *GormPostRepository) ReplacePostHashtags(postID uuid.UUID, hashtags []model.Hashtag) error { return nil }
-func (r *GormPostRepository) ReplacePostTags(postID uuid.UUID, taggedUserIDs []uuid.UUID) error { return nil }
+func (r *GormPostRepository) DeletePostTag(postID, taggedUserID uuid.UUID) error {
+	return r.db.Where("post_id = ? AND tagged_user_id = ?", postID, taggedUserID).Delete(&model.PostTag{}).Error
+}
 
 func (r *GormPostRepository) CreateNotification(notification *model.Notification) error {
 	return r.db.Create(notification).Error
 }
-
-var _ = errors.New

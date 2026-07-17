@@ -37,6 +37,12 @@ type RecoverEmailRequest struct {
 	Phone    string `json:"phone" binding:"required"`
 }
 
+type CompleteRecoverEmailRequest struct {
+	Username string `json:"username" binding:"required"`
+	Token    string `json:"token" binding:"required"`
+	NewEmail string `json:"new_email" binding:"required,email"`
+}
+
 type ResetPasswordRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Token    string `json:"token" binding:"required"`

@@ -225,6 +225,40 @@ func (s *AuthService) RecoverEmail(req dto.RecoverEmailRequest) error {
 	req.Username = strings.TrimSpace(strings.ToLower(req.Username))
 	req.Phone = strings.TrimSpace(req.Phone)
 	if req.Username == "" || req.Phone == "" { return ErrInvalidInput }
+
+	user, err := s.repo.FindUserByUsername(req.Username)
+	if err != nil || user == nil || user.Phone == nil || *user.Phone != req.Phone {
+		return nil
+	}
+
+	otpCode, _ := auth.GenerateOTP()
+	otp := &model.AuthOTP{
+		UserID:    user.ID,
+		Code:      otpCode,
+		Type:      "email_recovery",
+		ExpiresAt: time.Now().Add(10 * time.Minute),
+	}
+	_ = s.repo.SaveOTP(otp)
+	// In real world, send SMS. For MVP, print to console/stdout.
+	return nil
+}
+
+func (s *AuthService) CompleteRecoverEmail(req dto.CompleteRecoverEmailRequest) error {
+	req.Username = strings.TrimSpace(strings.ToLower(req.Username))
+	req.Token = strings.TrimSpace(req.Token)
+	req.NewEmail = strings.TrimSpace(strings.ToLower(req.NewEmail))
+	if req.Username == "" || req.Token == "" || req.NewEmail == "" { return ErrInvalidInput }
+
+	user, err := s.repo.FindUserByUsername(req.Username)
+	if err != nil || user == nil { return errors.New("invalid recovery attempt") }
+
+	otp, err := s.repo.FindValidOTP(user.ID, req.Token, "email_recovery")
+	if err != nil || otp == nil { return errors.New("invalid recovery token") }
+
+	user.Email = req.NewEmail
+	if err := s.repo.UpdateUser(user); err != nil { return err }
+
+	_ = s.repo.DeleteOTP(otp.ID)
 	return nil
 }
 

@@ -7,18 +7,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type InteractionHandler struct{ service *service.InteractionService }
 
-func NewInteractionHandler() *InteractionHandler {
-	repo := repository.NewInteractionRepository(config.GetDB())
-	return &InteractionHandler{service: service.NewInteractionService(repo)}
+func NewInteractionHandlerWithService(svc *service.InteractionService) *InteractionHandler {
+	return &InteractionHandler{service: svc}
 }
 
 func (h *InteractionHandler) LikePost(c *gin.Context) {

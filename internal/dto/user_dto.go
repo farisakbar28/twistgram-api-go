@@ -14,6 +14,10 @@ type UpdatePrivacyRequest struct {
 	IsPrivate *bool `json:"is_private"`
 }
 
+type DeleteAccountRequest struct {
+	Password string `json:"password" binding:"required"`
+}
+
 type UserInterestsRequest struct {
 	Interests []string `json:"interests" binding:"required"`
 }

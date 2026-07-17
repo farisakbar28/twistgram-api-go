@@ -5,10 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/middleware"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
@@ -16,11 +14,6 @@ import (
 // UserHandler menangani request terkait user/profile.
 type UserHandler struct {
 	userService *service.UserService
-}
-
-func NewUserHandler() *UserHandler {
-	repo := repository.NewUserRepository(config.GetDB())
-	return &UserHandler{userService: service.NewUserService(repo)}
 }
 
 func NewUserHandlerWithService(userService *service.UserService) *UserHandler {
@@ -97,6 +90,35 @@ func (h *UserHandler) UpdatePrivacy(c *gin.Context) {
 
 	profile, err := h.userService.UpdatePrivacy(userID, req)
 	h.handleServiceResult(c, profile, err)
+}
+
+// DeleteAccount menghapus akun pengguna.
+// Endpoint: DELETE /api/v1/users/me (PROTECTED)
+func (h *UserHandler) DeleteAccount(c *gin.Context) {
+	userID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+
+	var req dto.DeleteAccountRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+	}
+
+	if err := h.userService.DeleteAccount(userID, req.Password); err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserNotFound):
+			response.NotFound(c, "User not found")
+		case errors.Is(err, service.ErrWrongPassword):
+			response.BadRequest(c, "Incorrect password")
+		default:
+			response.InternalError(c, "Failed to delete account")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{"deleted": true})
 }
 
 // GetByUsername mengembalikan profil user berdasarkan username.

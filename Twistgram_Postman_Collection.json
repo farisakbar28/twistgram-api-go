@@ -1,1138 +1,1487 @@
 {
-  "info": {
-    "name": "Twistgram API MVP",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080/api/v1",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    }
+  "$schema": "https://opencode.ai/config.json",
+  "model": "9router/antigravity-dev",
+  "small_model": "9router/antigravity-quick",
+  "instructions": [
+    "AGENTS.md"
   ],
-  "item": [
-    {
-      "name": "Authentication",
-      "item": [
-        {
-          "name": "Register",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Test User\",\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"phone\": \"+1234567890\",\n  \"password\": \"Password123!\"\n}"
-            }
-          }
+  "provider": {
+    "9router": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "9Router",
+      "options": {
+        "baseURL": "http://localhost:20128/v1",
+        "timeout": 600000,
+        "chunkTimeout": 60000
+      },
+      "models": {
+        "free-combo": {
+          "name": "Free Combo - global emergency fallback"
         },
-        {
-          "name": "Verify OTP",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/verify-otp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "verify-otp"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"token\": \"123456\",\n  \"type\": \"signup\"\n}"
-            }
-          }
+        "antigravity-heavy": {
+          "name": "Antigravity - Heavy (complex reasoning)"
         },
-        {
-          "name": "Login",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"identifier\": \"test@example.com\",\n  \"password\": \"Password123!\"\n}"
-            }
-          }
+        "antigravity-plan": {
+          "name": "Antigravity - Plan/Scan (read-only)"
         },
-        {
-          "name": "Forgot Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/forgot-password",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "forgot-password"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\"\n}"
-            }
-          }
+        "antigravity-dev": {
+          "name": "Antigravity - Dev (daily coding)"
         },
-        {
-          "name": "Reset Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/reset-password",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "reset-password"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"token\": \"654321\",\n  \"password\": \"NewPassword123!\"\n}"
-            }
-          }
+        "antigravity-review": {
+          "name": "Antigravity - Review (read-only)"
+        },
+        "antigravity-quick": {
+          "name": "Antigravity - Quick (light task)"
+        },
+        "antigravity-spark": {
+          "name": "Antigravity - Spark (tiny task)"
+        },
+        "codex-heavy": {
+          "name": "Codex - Heavy (complex reasoning)"
+        },
+        "codex-plan": {
+          "name": "Codex - Plan/Scan (read-only)"
+        },
+        "codex-dev": {
+          "name": "Codex - Dev (daily coding)"
+        },
+        "codex-review": {
+          "name": "Codex - Review (read-only)"
+        },
+        "codex-quick": {
+          "name": "Codex - Quick (light task)"
+        },
+        "codex-spark": {
+          "name": "Codex - Spark (tiny task)"
+        },
+        "ollama-heavy": {
+          "name": "Ollama - Heavy (complex reasoning)"
+        },
+        "ollama-plan": {
+          "name": "Ollama - Plan/Scan (read-only)"
+        },
+        "ollama-dev": {
+          "name": "Ollama - Dev (daily coding)"
+        },
+        "ollama-review": {
+          "name": "Ollama - Review (read-only)"
+        },
+        "ollama-quick": {
+          "name": "Ollama - Quick (light task)"
+        },
+        "ollama-spark": {
+          "name": "Ollama - Spark (tiny task)"
+        },
+        "kiro-heavy": {
+          "name": "Kiro - Heavy (complex reasoning)"
+        },
+        "kiro-plan": {
+          "name": "Kiro - Plan/Scan (read-only)"
+        },
+        "kiro-dev": {
+          "name": "Kiro - Dev (daily coding)"
+        },
+        "kiro-review": {
+          "name": "Kiro - Review (read-only)"
+        },
+        "kiro-quick": {
+          "name": "Kiro - Quick (light task)"
+        },
+        "kiro-spark": {
+          "name": "Kiro - Spark (tiny task)"
+        },
+        "nvidia-heavy": {
+          "name": "Nvidia - Heavy (complex reasoning)"
+        },
+        "nvidia-plan": {
+          "name": "Nvidia - Plan/Scan (read-only)"
+        },
+        "nvidia-dev": {
+          "name": "Nvidia - Dev (daily coding)"
+        },
+        "nvidia-review": {
+          "name": "Nvidia - Review (read-only)"
+        },
+        "nvidia-quick": {
+          "name": "Nvidia - Quick (light task)"
+        },
+        "nvidia-spark": {
+          "name": "Nvidia - Spark (tiny task)"
+        },
+        "opencode-heavy": {
+          "name": "OpenCode - Heavy (complex reasoning)"
+        },
+        "opencode-plan": {
+          "name": "OpenCode - Plan/Scan (read-only)"
+        },
+        "opencode-dev": {
+          "name": "OpenCode - Dev (daily coding)"
+        },
+        "opencode-review": {
+          "name": "OpenCode - Review (read-only)"
+        },
+        "opencode-quick": {
+          "name": "OpenCode - Quick (light task)"
+        },
+        "opencode-spark": {
+          "name": "OpenCode - Spark (tiny task)"
+        },
+        "openrouter-heavy": {
+          "name": "OpenRouter - Heavy (complex reasoning)"
+        },
+        "openrouter-plan": {
+          "name": "OpenRouter - Plan/Scan (read-only)"
+        },
+        "openrouter-dev": {
+          "name": "OpenRouter - Dev (daily coding)"
+        },
+        "openrouter-review": {
+          "name": "OpenRouter - Review (read-only)"
+        },
+        "openrouter-quick": {
+          "name": "OpenRouter - Quick (light task)"
+        },
+        "openrouter-spark": {
+          "name": "OpenRouter - Spark (tiny task)"
+        },
+        "gemini-heavy": {
+          "name": "Gemini - Heavy (complex reasoning)"
+        },
+        "gemini-plan": {
+          "name": "Gemini - Plan/Scan (read-only)"
+        },
+        "gemini-dev": {
+          "name": "Gemini - Dev (daily coding)"
+        },
+        "gemini-review": {
+          "name": "Gemini - Review (read-only)"
+        },
+        "gemini-quick": {
+          "name": "Gemini - Quick (light task)"
+        },
+        "gemini-spark": {
+          "name": "Gemini - Spark (tiny task)"
         }
-      ]
-    },
-    {
-      "name": "Users",
-      "item": [
-        {
-          "name": "Get Me",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Me",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"bio\": \"Hello World\",\n  \"name\": \"Updated User\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Privacy",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me/privacy",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me",
-                "privacy"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"is_private\": true\n}"
-            }
-          }
-        },
-        {
-          "name": "Get Interests",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me/interests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me",
-                "interests"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Set Interests",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me/interests",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me",
-                "interests"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"interests\": [\n    \"sports\",\n    \"music\"\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "Get By Username",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:username",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":username"
-              ],
-              "variable": [
-                {
-                  "key": "username",
-                  "value": "testuser"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Social",
-      "item": [
-        {
-          "name": "Follow",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/follow",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "follow"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Unfollow",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/follow",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "follow"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Followers",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/followers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "followers"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Following",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/following",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "following"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Block",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/block",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "block"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Unblock",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:id/block",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":id",
-                "block"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "uuid-here"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Report",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/reports",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "reports"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": \"uuid-here\",\n  \"reason\": \"spam\"\n}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Posts",
-      "item": [
-        {
-          "name": "Create Post",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"caption\": \"My new post! #awesome\",\n  \"location\": \"Jakarta\",\n  \"media\": [\n    {\n      \"media_url\": \"https://example.com/img.jpg\",\n      \"media_type\": \"image\",\n      \"order_index\": 0\n    }\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "Feed",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/feed",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "feed"
-              ]
-            }
-          }
-        },
-        {
-          "name": "My Posts",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/me/posts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "me",
-                "posts"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Edit Caption",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"caption\": \"Updated caption\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Like Post",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/like",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "like"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Save Post",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/save",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "save"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Comments",
-      "item": [
-        {
-          "name": "Get Comments",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/comments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "comments"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Comment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/comments",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "comments"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Nice post!\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Like Comment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/comments/:comment_id/like",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "comments",
-                ":comment_id",
-                "like"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                },
-                {
-                  "key": "comment_id",
-                  "value": "comment-uuid"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Comment",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/posts/:id/comments/:comment_id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "posts",
-                ":id",
-                "comments",
-                ":comment_id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "post-uuid"
-                },
-                {
-                  "key": "comment_id",
-                  "value": "comment-uuid"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Stories",
-      "item": [
-        {
-          "name": "Create Story",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/stories",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "stories"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"media_type\": \"image\",\n  \"media_url\": \"https://example.com/story.jpg\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Story Feed",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/stories/feed",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "stories",
-                "feed"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Story",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/stories/:id",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "stories",
-                ":id"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "story-uuid"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Search",
-      "item": [
-        {
-          "name": "Search",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/search?q=test",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "search"
-              ],
-              "query": [
-                {
-                  "key": "q",
-                  "value": "test"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Direct Messages",
-      "item": [
-        {
-          "name": "List Conversations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/conversations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "conversations"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Start Conversation",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/conversations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "conversations"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"target_id\": \"uuid-here\"\n}"
-            }
-          }
-        },
-        {
-          "name": "List Messages",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/conversations/:id/messages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "conversations",
-                ":id",
-                "messages"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "conv-uuid"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Send Message",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/conversations/:id/messages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "conversations",
-                ":id",
-                "messages"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "conv-uuid"
-                }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Hello there!\"\n}"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "Notifications",
-      "item": [
-        {
-          "name": "List Notifications",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/notifications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "notifications"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Mark Read",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/notifications/:id/read",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "notifications",
-                ":id",
-                "read"
-              ],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "notif-uuid"
-                }
-              ]
-            }
-          }
-        }
-      ]
+      }
     }
-  ]
+  },
+  "command": {
+    "heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis",
+      "agent": "heavy"
+    },
+    "plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan",
+      "agent": "plan"
+    },
+    "dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code",
+      "agent": "build"
+    },
+    "review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review",
+      "agent": "review"
+    },
+    "quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task",
+      "agent": "quick"
+    },
+    "spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task",
+      "agent": "spark"
+    },
+    "scan": {
+      "template": "[SCAN MODE - READ ONLY] Audit relevant files only. Do not edit. Output concise findings and recommended next step. Task: $ARGUMENTS",
+      "description": "Read-only repo scan",
+      "agent": "scan"
+    },
+    "fix": {
+      "template": "[TARGETED FIX MODE] Fix only the described issue. Avoid broad refactor. After editing, summarize changed files and tests. Issue: $ARGUMENTS",
+      "description": "Small targeted fix",
+      "agent": "build"
+    },
+    "free": {
+      "template": "[FREE FALLBACK MODE] Use lightweight reasoning. Keep output concise. Task: $ARGUMENTS",
+      "description": "Fallback when main models are limited",
+      "agent": "free"
+    },
+    "antigravity-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Antigravity",
+      "agent": "antigravity-heavy"
+    },
+    "antigravity-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Antigravity",
+      "agent": "antigravity-plan"
+    },
+    "antigravity-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Antigravity",
+      "agent": "antigravity-dev"
+    },
+    "antigravity-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Antigravity",
+      "agent": "antigravity-review"
+    },
+    "antigravity-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Antigravity",
+      "agent": "antigravity-quick"
+    },
+    "antigravity-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Antigravity",
+      "agent": "antigravity-spark"
+    },
+    "codex-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Codex",
+      "agent": "codex-heavy"
+    },
+    "codex-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Codex",
+      "agent": "codex-plan"
+    },
+    "codex-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Codex",
+      "agent": "codex-dev"
+    },
+    "codex-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Codex",
+      "agent": "codex-review"
+    },
+    "codex-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Codex",
+      "agent": "codex-quick"
+    },
+    "codex-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Codex",
+      "agent": "codex-spark"
+    },
+    "ollama-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Ollama",
+      "agent": "ollama-heavy"
+    },
+    "ollama-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Ollama",
+      "agent": "ollama-plan"
+    },
+    "ollama-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Ollama",
+      "agent": "ollama-dev"
+    },
+    "ollama-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Ollama",
+      "agent": "ollama-review"
+    },
+    "ollama-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Ollama",
+      "agent": "ollama-quick"
+    },
+    "ollama-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Ollama",
+      "agent": "ollama-spark"
+    },
+    "kiro-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Kiro",
+      "agent": "kiro-heavy"
+    },
+    "kiro-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Kiro",
+      "agent": "kiro-plan"
+    },
+    "kiro-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Kiro",
+      "agent": "kiro-dev"
+    },
+    "kiro-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Kiro",
+      "agent": "kiro-review"
+    },
+    "kiro-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Kiro",
+      "agent": "kiro-quick"
+    },
+    "kiro-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Kiro",
+      "agent": "kiro-spark"
+    },
+    "nvidia-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Nvidia",
+      "agent": "nvidia-heavy"
+    },
+    "nvidia-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Nvidia",
+      "agent": "nvidia-plan"
+    },
+    "nvidia-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Nvidia",
+      "agent": "nvidia-dev"
+    },
+    "nvidia-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Nvidia",
+      "agent": "nvidia-review"
+    },
+    "nvidia-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Nvidia",
+      "agent": "nvidia-quick"
+    },
+    "nvidia-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Nvidia",
+      "agent": "nvidia-spark"
+    },
+    "opencode-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — OpenCode",
+      "agent": "opencode-heavy"
+    },
+    "opencode-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — OpenCode",
+      "agent": "opencode-plan"
+    },
+    "opencode-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — OpenCode",
+      "agent": "opencode-dev"
+    },
+    "opencode-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — OpenCode",
+      "agent": "opencode-review"
+    },
+    "opencode-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — OpenCode",
+      "agent": "opencode-quick"
+    },
+    "opencode-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — OpenCode",
+      "agent": "opencode-spark"
+    },
+    "openrouter-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — OpenRouter",
+      "agent": "openrouter-heavy"
+    },
+    "openrouter-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — OpenRouter",
+      "agent": "openrouter-plan"
+    },
+    "openrouter-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — OpenRouter",
+      "agent": "openrouter-dev"
+    },
+    "openrouter-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — OpenRouter",
+      "agent": "openrouter-review"
+    },
+    "openrouter-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — OpenRouter",
+      "agent": "openrouter-quick"
+    },
+    "openrouter-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — OpenRouter",
+      "agent": "openrouter-spark"
+    },
+    "gemini-heavy": {
+      "template": "[HEAVY MODE - READ ONLY] Use only for complex architecture/debugging/migration tasks. Do not edit. Task: $ARGUMENTS",
+      "description": "Complex read-only analysis — Gemini",
+      "agent": "gemini-heavy"
+    },
+    "gemini-plan": {
+      "template": "[PLAN MODE - READ ONLY] $ARGUMENTS",
+      "description": "Read-only implementation plan — Gemini",
+      "agent": "gemini-plan"
+    },
+    "gemini-dev": {
+      "template": "[BUILD MODE] $ARGUMENTS",
+      "description": "Implement or fix code — Gemini",
+      "agent": "gemini-dev"
+    },
+    "gemini-review": {
+      "template": "[REVIEW MODE - READ ONLY] Verify against requirements. Do not edit. Output VERDICT=OK or NEEDS_FIX with max 5 prioritized issues. Scope: $ARGUMENTS",
+      "description": "Read-only review — Gemini",
+      "agent": "gemini-review"
+    },
+    "gemini-quick": {
+      "template": "[QUICK MODE] $ARGUMENTS",
+      "description": "Lightweight task — Gemini",
+      "agent": "gemini-quick"
+    },
+    "gemini-spark": {
+      "template": "[SPARK MODE] Small and targeted task only. Do not audit the whole repo. Task: $ARGUMENTS",
+      "description": "Very small coding/editing task — Gemini",
+      "agent": "gemini-spark"
+    }
+  },
+  "agent": {
+    "heavy": {
+      "model": "9router/antigravity-heavy",
+      "description": "Heavy - complex read-only reasoning",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Antigravity). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "plan": {
+      "model": "9router/antigravity-plan",
+      "description": "Plan - read-only implementation planner",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Antigravity). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny",
+        "lsp": "allow"
+      }
+    },
+    "build": {
+      "model": "9router/antigravity-dev",
+      "description": "Dev - implementation and bug fixing",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Antigravity). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "review": {
+      "model": "9router/antigravity-review",
+      "description": "Review - read-only verification",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Antigravity). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "quick": {
+      "model": "9router/antigravity-quick",
+      "description": "Quick - lightweight task agent",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Antigravity). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "spark": {
+      "model": "9router/antigravity-spark",
+      "description": "Spark - very small coding task",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Antigravity). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "scan": {
+      "model": "9router/antigravity-plan",
+      "description": "Scan - read-only repository analysis",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu scan agent READ-ONLY. Baca hanya file yang relevan. Jangan edit. Jangan jalankan command destruktif. Output: temuan utama, file terkait, risiko, dan rekomendasi langkah berikutnya.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "free": {
+      "model": "9router/free-combo",
+      "description": "Free - fallback agent",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu fallback agent. Kerjakan task ringan dengan hemat token. Jangan lakukan perubahan besar. Jika task terlalu kompleks, sarankan pindah ke /plan, /dev, atau /heavy.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "ask"
+      }
+    },
+    "antigravity-heavy": {
+      "model": "9router/antigravity-heavy",
+      "description": "Heavy - complex read-only reasoning [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Antigravity). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "antigravity-plan": {
+      "model": "9router/antigravity-plan",
+      "description": "Plan - read-only implementation planner [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Antigravity). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "antigravity-dev": {
+      "model": "9router/antigravity-dev",
+      "description": "Dev - implementation and bug fixing [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Antigravity). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "antigravity-review": {
+      "model": "9router/antigravity-review",
+      "description": "Review - read-only verification [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Antigravity). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "antigravity-quick": {
+      "model": "9router/antigravity-quick",
+      "description": "Quick - lightweight task agent [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Antigravity). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "antigravity-spark": {
+      "model": "9router/antigravity-spark",
+      "description": "Spark - very small coding task [Antigravity]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Antigravity). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "codex-heavy": {
+      "model": "9router/codex-heavy",
+      "description": "Heavy - complex read-only reasoning [Codex]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Codex). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "codex-plan": {
+      "model": "9router/codex-plan",
+      "description": "Plan - read-only implementation planner [Codex]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Codex). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "codex-dev": {
+      "model": "9router/codex-dev",
+      "description": "Dev - implementation and bug fixing [Codex]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Codex). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "codex-review": {
+      "model": "9router/codex-review",
+      "description": "Review - read-only verification [Codex]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Codex). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "codex-quick": {
+      "model": "9router/codex-quick",
+      "description": "Quick - lightweight task agent [Codex]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Codex). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "codex-spark": {
+      "model": "9router/codex-spark",
+      "description": "Spark - very small coding task [Codex]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Codex). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "ollama-heavy": {
+      "model": "9router/ollama-heavy",
+      "description": "Heavy - complex read-only reasoning [Ollama]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Ollama). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "ollama-plan": {
+      "model": "9router/ollama-plan",
+      "description": "Plan - read-only implementation planner [Ollama]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Ollama). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "ollama-dev": {
+      "model": "9router/ollama-dev",
+      "description": "Dev - implementation and bug fixing [Ollama]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Ollama). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "ollama-review": {
+      "model": "9router/ollama-review",
+      "description": "Review - read-only verification [Ollama]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Ollama). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "ollama-quick": {
+      "model": "9router/ollama-quick",
+      "description": "Quick - lightweight task agent [Ollama]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Ollama). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "ollama-spark": {
+      "model": "9router/ollama-spark",
+      "description": "Spark - very small coding task [Ollama]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Ollama). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "kiro-heavy": {
+      "model": "9router/kiro-heavy",
+      "description": "Heavy - complex read-only reasoning [Kiro]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Kiro). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "kiro-plan": {
+      "model": "9router/kiro-plan",
+      "description": "Plan - read-only implementation planner [Kiro]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Kiro). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "kiro-dev": {
+      "model": "9router/kiro-dev",
+      "description": "Dev - implementation and bug fixing [Kiro]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Kiro). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "kiro-review": {
+      "model": "9router/kiro-review",
+      "description": "Review - read-only verification [Kiro]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Kiro). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "kiro-quick": {
+      "model": "9router/kiro-quick",
+      "description": "Quick - lightweight task agent [Kiro]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Kiro). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "kiro-spark": {
+      "model": "9router/kiro-spark",
+      "description": "Spark - very small coding task [Kiro]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Kiro). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "nvidia-heavy": {
+      "model": "9router/nvidia-heavy",
+      "description": "Heavy - complex read-only reasoning [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Nvidia). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "nvidia-plan": {
+      "model": "9router/nvidia-plan",
+      "description": "Plan - read-only implementation planner [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Nvidia). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "nvidia-dev": {
+      "model": "9router/nvidia-dev",
+      "description": "Dev - implementation and bug fixing [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Nvidia). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "nvidia-review": {
+      "model": "9router/nvidia-review",
+      "description": "Review - read-only verification [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Nvidia). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "nvidia-quick": {
+      "model": "9router/nvidia-quick",
+      "description": "Quick - lightweight task agent [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Nvidia). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "nvidia-spark": {
+      "model": "9router/nvidia-spark",
+      "description": "Spark - very small coding task [Nvidia]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Nvidia). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "opencode-heavy": {
+      "model": "9router/opencode-heavy",
+      "description": "Heavy - complex read-only reasoning [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: OpenCode). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "opencode-plan": {
+      "model": "9router/opencode-plan",
+      "description": "Plan - read-only implementation planner [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: OpenCode). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "opencode-dev": {
+      "model": "9router/opencode-dev",
+      "description": "Dev - implementation and bug fixing [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: OpenCode). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "opencode-review": {
+      "model": "9router/opencode-review",
+      "description": "Review - read-only verification [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: OpenCode). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "opencode-quick": {
+      "model": "9router/opencode-quick",
+      "description": "Quick - lightweight task agent [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: OpenCode). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "opencode-spark": {
+      "model": "9router/opencode-spark",
+      "description": "Spark - very small coding task [OpenCode]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: OpenCode). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "openrouter-heavy": {
+      "model": "9router/openrouter-heavy",
+      "description": "Heavy - complex read-only reasoning [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: OpenRouter). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "openrouter-plan": {
+      "model": "9router/openrouter-plan",
+      "description": "Plan - read-only implementation planner [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: OpenRouter). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "openrouter-dev": {
+      "model": "9router/openrouter-dev",
+      "description": "Dev - implementation and bug fixing [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: OpenRouter). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "openrouter-review": {
+      "model": "9router/openrouter-review",
+      "description": "Review - read-only verification [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: OpenRouter). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "openrouter-quick": {
+      "model": "9router/openrouter-quick",
+      "description": "Quick - lightweight task agent [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: OpenRouter). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "openrouter-spark": {
+      "model": "9router/openrouter-spark",
+      "description": "Spark - very small coding task [OpenRouter]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: OpenRouter). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "gemini-heavy": {
+      "model": "9router/gemini-heavy",
+      "description": "Heavy - complex read-only reasoning [Gemini]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu senior architecture/debug planner READ-ONLY (provider: Gemini). Gunakan untuk task kompleks saja. Analisis requirement, risiko, dependency, edge case, migration impact, urutan file, dan checklist validasi. Jangan edit kode.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "gemini-plan": {
+      "model": "9router/gemini-plan",
+      "description": "Plan - read-only implementation planner [Gemini]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu plan agent READ-ONLY (provider: Gemini). Buat rencana implementasi yang ringkas dan spesifik. Jelaskan file yang perlu dicek/diubah, urutan kerja, risiko, dan checklist validasi. Jangan edit kode. Jangan buat kode panjang.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "gemini-dev": {
+      "model": "9router/gemini-dev",
+      "description": "Dev - implementation and bug fixing [Gemini]",
+      "mode": "primary",
+      "temperature": 0.25,
+      "prompt": "Kamu build agent (provider: Gemini). Eksekusi kode sesuai requirement. Hemat token: jangan ulang konteks, jangan refactor di luar scope, jangan ubah file tidak relevan. Sebelum edit, pahami file terkait. Setelah selesai beri ringkasan file yang diubah dan cara test.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    },
+    "gemini-review": {
+      "model": "9router/gemini-review",
+      "description": "Review - read-only verification [Gemini]",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "Kamu review agent READ-ONLY (provider: Gemini). Jangan edit kode. Verifikasi requirement miss, bug, security, migration risk, edge case, dead code, dan konsistensi style. Output wajib: VERDICT=OK atau NEEDS_FIX, lalu maksimal 5 masalah prioritas dengan file terkait dan alasan singkat.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "gemini-quick": {
+      "model": "9router/gemini-quick",
+      "description": "Quick - lightweight task agent [Gemini]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu quick agent untuk task ringan (provider: Gemini). Jawab singkat, langsung ke inti, jangan audit seluruh repo kecuali diminta. Hemat token.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "deny"
+      }
+    },
+    "gemini-spark": {
+      "model": "9router/gemini-spark",
+      "description": "Spark - very small coding task [Gemini]",
+      "mode": "primary",
+      "temperature": 0.2,
+      "prompt": "Kamu spark agent untuk perubahan sangat kecil (provider: Gemini). Jangan audit seluruh repo. Jangan refactor di luar scope. Jika perlu edit, ubah file seminimal mungkin. Setelah selesai, sebutkan file yang diubah dan cara cek.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "websearch": "ask",
+        "edit": "allow"
+      }
+    }
+  },
+  "default_agent": "build",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "tail_turns": 8,
+    "reserved": 6000
+  },
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      ".git/**",
+      "*.log",
+      "*.tmp",
+      "__pycache__/**",
+      "_pycache_/**",
+      ".next/**",
+      "build/**",
+      "coverage/**",
+      ".turbo/**",
+      ".opencode/cache/**",
+      ".venv/**",
+      "vendor/**"
+    ]
+  },
+  "snapshot": false,
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "lsp": "allow",
+    "edit": "ask",
+    "bash": "ask",
+    "task": "ask",
+    "webfetch": "ask",
+    "websearch": "ask",
+    "external_directory": "ask",
+    "doom_loop": "deny"
+  },
+  "server": {
+    "port": 4096,
+    "hostname": "127.0.0.1",
+    "ssh_timeout": 300000
+  },
+  "mcp": {
+    "supabase-remote": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp",
+      "enabled": false,
+      "timeout": 45000
+    },
+    "supabase-guestlist": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "enabled": false,
+      "environment": {
+        "SUPABASE_ACCESS_TOKEN": "{env:SUPABASE_GUESTLIST_ACCESS_TOKEN}"
+      }
+    },
+    "supabase-lerka": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "enabled": false,
+      "environment": {
+        "SUPABASE_ACCESS_TOKEN": "{env:SUPABASE_LERKA_ACCESS_TOKEN}"
+      }
+    }
+  }
 }

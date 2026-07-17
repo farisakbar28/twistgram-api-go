@@ -88,9 +88,51 @@ func (s *DMService) SendMessage(userID, conversationID uuid.UUID, req dto.Messag
 	msg := &model.Message{ConversationID: conversationID, SenderID: userID, CreatedAt: time.Now()}
 	if content != "" { msg.Content = &content }
 	if media != "" { msg.MediaURL = &media }
-	if req.StoryID != nil && strings.TrimSpace(*req.StoryID) != "" { parsed, err := uuid.Parse(strings.TrimSpace(*req.StoryID)); if err == nil { msg.ReplyToStoryID = &parsed } }
+	if req.StoryID != nil && strings.TrimSpace(*req.StoryID) != "" {
+		parsed, err := uuid.Parse(strings.TrimSpace(*req.StoryID))
+		if err == nil {
+			msg.ReplyToStoryID = &parsed
+			// CNT-05/§5.5: Notifikasi ke pemilik story saat ada reply
+			storyOwnerID, err := s.repo.GetStoryOwner(parsed)
+			if err == nil && storyOwnerID != userID {
+				_ = s.repo.CreateNotification(&model.Notification{RecipientID: storyOwnerID, ActorID: userID, Type: "story_reply", ReferenceID: &msg.ID})
+			}
+		}
+	}
 	if err := s.repo.CreateMessage(msg); err != nil { return nil, err }
 	return &dto.MessageResponse{ID: msg.ID.String(), ConversationID: conversationID.String(), SenderID: userID.String(), Content: msg.Content, MediaURL: msg.MediaURL, IsRead: msg.IsRead, CreatedAt: msg.CreatedAt}, nil
+}
+
+// MSG-02: List conversations where the other user has private account
+// and current user is NOT an accepted follower — these are "message requests"
+func (s *DMService) ListMessageRequests(userID uuid.UUID, page, limit int) ([]dto.ConversationResponse, int64, error) {
+	if userID == uuid.Nil { return nil, 0, ErrInvalidInput }
+	pg, lm := normalizePagination(page, limit)
+	convs, total, err := s.repo.ListMessageRequests(userID, pg, lm)
+	if err != nil { return nil, 0, err }
+
+	convIDs := make([]uuid.UUID, 0, len(convs))
+	for _, c := range convs { convIDs = append(convIDs, c.ID) }
+
+	parts, err := s.repo.GetConversationParticipants(convIDs)
+	if err != nil { return nil, 0, err }
+
+	partsMap := make(map[uuid.UUID]*dto.SearchUserItem)
+	for _, p := range parts {
+		if p.UserID != userID && !p.Conversation.IsGroup {
+			partsMap[p.ConversationID] = &dto.SearchUserItem{
+				ID: p.User.ID.String(), Name: p.User.Name, Username: p.User.Username, AvatarURL: p.User.AvatarURL,
+			}
+		}
+	}
+
+	out := make([]dto.ConversationResponse, 0, len(convs))
+	for _, c := range convs {
+		res := dto.ConversationResponse{ID: c.ID.String(), IsGroup: c.IsGroup, CreatedAt: c.CreatedAt}
+		if other, ok := partsMap[c.ID]; ok { res.OtherUser = other }
+		out = append(out, res)
+	}
+	return out, total, nil
 }
 
 func deref(s *string) string { if s == nil { return "" }; return *s }

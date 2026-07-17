@@ -6,20 +6,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type SocialHandler struct {
 	socialService *service.SocialService
-}
-
-func NewSocialHandler() *SocialHandler {
-	repo := repository.NewSocialRepository(config.GetDB())
-	return &SocialHandler{socialService: service.NewSocialService(repo)}
 }
 
 func NewSocialHandlerWithService(socialService *service.SocialService) *SocialHandler {
@@ -169,6 +162,18 @@ func (h *SocialHandler) Unblock(c *gin.Context) {
 	response.Success(c, gin.H{"unblocked": true})
 }
 
+func (h *SocialHandler) GetBlockedUsers(c *gin.Context) {
+	viewerID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+	users, err := h.socialService.GetBlockedUsers(viewerID)
+	if h.handleSocialError(c, err) {
+		return
+	}
+	response.Success(c, gin.H{"users": users})
+}
+
 func (h *SocialHandler) Report(c *gin.Context) {
 	reporterID, ok := getAuthenticatedUserID(c)
 	if !ok {
@@ -184,6 +189,50 @@ func (h *SocialHandler) Report(c *gin.Context) {
 		return
 	}
 	response.Created(c, gin.H{"report": result})
+}
+
+// Close Friends handlers
+
+func (h *SocialHandler) AddCloseFriend(c *gin.Context) {
+	viewerID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+	targetID, ok := parseIDParam(c)
+	if !ok {
+		return
+	}
+	if h.handleSocialError(c, h.socialService.AddCloseFriend(viewerID, targetID)) {
+		return
+	}
+	response.Success(c, gin.H{"close_friend": true})
+}
+
+func (h *SocialHandler) RemoveCloseFriend(c *gin.Context) {
+	viewerID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+	targetID, ok := parseIDParam(c)
+	if !ok {
+		return
+	}
+	if h.handleSocialError(c, h.socialService.RemoveCloseFriend(viewerID, targetID)) {
+		return
+	}
+	response.Success(c, gin.H{"close_friend": false})
+}
+
+func (h *SocialHandler) ListCloseFriends(c *gin.Context) {
+	viewerID, ok := getAuthenticatedUserID(c)
+	if !ok {
+		return
+	}
+	items, meta, err := h.socialService.ListCloseFriends(viewerID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
+	if h.handleSocialError(c, err) {
+		return
+	}
+	response.WithPagination(c, gin.H{"close_friends": items}, meta)
 }
 
 func parseIDParam(c *gin.Context) (uuid.UUID, bool) {

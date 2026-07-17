@@ -51,7 +51,14 @@ func (h *AuthHandler) RecoverEmail(c *gin.Context) {
 	var req dto.RecoverEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
 	if h.handleAuthError(c, h.authService.RecoverEmail(req)) { return }
-	response.Success(c, gin.H{"message": "OTP sent"})
+	response.Success(c, gin.H{"message": "Recovery process initiated"})
+}
+
+func (h *AuthHandler) CompleteRecoverEmail(c *gin.Context) {
+	var req dto.CompleteRecoverEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if h.handleAuthError(c, h.authService.CompleteRecoverEmail(req)) { return }
+	response.Success(c, gin.H{"message": "Email updated successfully"})
 }
 
 func (h *AuthHandler) CheckAvailability(c *gin.Context) {
@@ -88,9 +95,8 @@ func (h *AuthHandler) handleAuthError(c *gin.Context, err error) bool {
 	if err == nil { return false }
 	if errors.Is(err, service.ErrInvalidInput) { 
 		response.BadRequest(c, "Invalid request data") 
-	} else { 
-		// Return inner error detail for clarity during MVP development
-		response.InternalError(c, "Auth service error: "+err.Error()) 
+	} else {
+		response.InternalError(c, "Internal server error")
 	}
 	return true
 }

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -68,7 +69,17 @@ func RateLimit(r rate.Limit, b int) gin.HandlerFunc {
 		ip := c.ClientIP()
 		limiter := getVisitor(ip, r, b)
 
+		// Set rate limit info headers
+		c.Header("X-RateLimit-Limit", "5")
+
+		remaining := limiter.Tokens()
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(int(remaining)))
+
 		if !limiter.Allow() {
+			// Estimate wait time: token refill rate is r tokens/sec
+			retryAfter := int(1.0 / float64(r)) + 1 // at least 1 second
+			c.Header("Retry-After", strconv.Itoa(retryAfter))
+			c.Header("X-RateLimit-Remaining", "0")
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"status":  "error",
 				"message": "Too many requests. Please try again later.",

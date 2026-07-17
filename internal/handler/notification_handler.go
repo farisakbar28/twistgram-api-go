@@ -5,17 +5,29 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
-	"twistgram-api-go/internal/repository"
+	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type NotificationHandler struct{ service *service.NotificationService }
 
-func NewNotificationHandler() *NotificationHandler {
-	repo := repository.NewNotificationRepository(config.GetDB())
-	return &NotificationHandler{service: service.NewNotificationService(repo)}
+func NewNotificationHandlerWithService(svc *service.NotificationService) *NotificationHandler {
+	return &NotificationHandler{service: svc}
+}
+
+func (h *NotificationHandler) ReadAll(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	if err := h.service.MarkAllRead(userID); err != nil { response.InternalError(c, "Failed to mark notifications read"); return }
+	response.Success(c, gin.H{"read_all": true})
+}
+
+func (h *NotificationHandler) Create(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	var req dto.CreateNotificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if err := h.service.Create(userID, req); err != nil { response.InternalError(c, "Failed to create notification"); return }
+	response.Created(c, gin.H{"created": true})
 }
 
 func (h *NotificationHandler) List(c *gin.Context) {

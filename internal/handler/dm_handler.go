@@ -5,18 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"twistgram-api-go/internal/config"
 	"twistgram-api-go/internal/dto"
-	"twistgram-api-go/internal/repository"
 	"twistgram-api-go/internal/service"
 	"twistgram-api-go/pkg/response"
 )
 
 type DMHandler struct{ service *service.DMService }
 
-func NewDMHandler() *DMHandler {
-	repo := repository.NewDMRepository(config.GetDB())
-	return &DMHandler{service: service.NewDMService(repo)}
+func NewDMHandlerWithService(svc *service.DMService) *DMHandler {
+	return &DMHandler{service: svc}
 }
 
 func (h *DMHandler) StartConversation(c *gin.Context) {
@@ -57,6 +54,15 @@ func (h *DMHandler) SendMessage(c *gin.Context) {
 	res, err := h.service.SendMessage(userID, conversationID, req)
 	if handleDMError(c, err) { return }
 	response.Created(c, gin.H{"message": res})
+}
+
+func (h *DMHandler) ListMessageRequests(c *gin.Context) {
+	userID, ok := authUser(c); if !ok { return }
+	pg := queryIntDM(c, "page", 1)
+	lm := queryIntDM(c, "limit", 20)
+	items, total, err := h.service.ListMessageRequests(userID, pg, lm)
+	if handleDMError(c, err) { return }
+	response.WithPagination(c, gin.H{"conversations": items}, &response.Meta{Page: pg, Limit: lm, Total: total, TotalPages: totalPages(total, lm)})
 }
 
 func handleDMError(c *gin.Context, err error) bool {

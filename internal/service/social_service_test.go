@@ -76,6 +76,7 @@ func (f *fakeSocialRepo) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool,
 func (f *fakeSocialRepo) FindBlock(blockerID, blockedID uuid.UUID) (*model.Block, error) {
 	return nil, gorm.ErrRecordNotFound
 }
+func (f *fakeSocialRepo) FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error) { return nil, nil }
 func (f *fakeSocialRepo) CreateBlock(block *model.Block) error             { f.blockCreated = true; return nil }
 func (f *fakeSocialRepo) DeleteBlock(blockerID, blockedID uuid.UUID) error { return nil }
 func (f *fakeSocialRepo) CreateReport(report *model.Report) error {
@@ -88,6 +89,11 @@ func (f *fakeSocialRepo) CreateReport(report *model.Report) error {
 func (f *fakeSocialRepo) UserExists(id uuid.UUID) (bool, error)    { _, ok := f.users[id]; return ok, nil }
 func (f *fakeSocialRepo) PostExists(id uuid.UUID) (bool, error)    { return f.postExists, nil }
 func (f *fakeSocialRepo) CommentExists(id uuid.UUID) (bool, error) { return f.commentExists, nil }
+
+// Close Friends
+func (f *fakeSocialRepo) SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error { return nil }
+func (f *fakeSocialRepo) ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error) { return nil, 0, nil }
+func (f *fakeSocialRepo) IsCloseFriend(userID, targetID uuid.UUID) (bool, error) { return false, nil }
 
 func TestFollowPrivateUserCreatesPendingRequest(t *testing.T) {
 	viewerID := uuid.New()

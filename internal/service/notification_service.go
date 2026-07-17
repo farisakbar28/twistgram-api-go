@@ -34,6 +34,24 @@ func (s *NotificationService) MarkRead(recipientID, notificationID uuid.UUID) er
 	return nil
 }
 
+func (s *NotificationService) MarkAllRead(recipientID uuid.UUID) error {
+	if recipientID == uuid.Nil { return ErrInvalidInput }
+	return s.repo.MarkAllRead(recipientID)
+}
+
+func (s *NotificationService) Create(actorID uuid.UUID, req dto.CreateNotificationRequest) error {
+	if actorID == uuid.Nil { return ErrInvalidInput }
+	recID, err := uuid.Parse(req.RecipientID)
+	if err != nil { return errors.New("invalid recipient_id") }
+	var refID *uuid.UUID
+	if req.ReferenceID != nil {
+		tmp, err := uuid.Parse(*req.ReferenceID)
+		if err == nil { refID = &tmp }
+	}
+	notif := &model.Notification{RecipientID: recID, ActorID: actorID, Type: req.Type, ReferenceID: refID}
+	return s.repo.CreateNotification(notif)
+}
+
 func buildNotificationResponse(n model.Notification) dto.NotificationResponse {
 	var ref *string
 	if n.ReferenceID != nil { v := n.ReferenceID.String(); ref = &v }

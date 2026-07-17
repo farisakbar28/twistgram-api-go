@@ -13,6 +13,7 @@ type UserRepository interface {
 	FindByUsername(username string) (*model.User, error)
 	UsernameExists(username string, excludeID uuid.UUID) (bool, error)
 	Update(user *model.User) error
+	DeleteUser(id uuid.UUID) error
 	CountFollowers(userID uuid.UUID) (int64, error)
 	CountFollowing(userID uuid.UUID) (int64, error)
 	CountPosts(userID uuid.UUID) (int64, error)
@@ -56,6 +57,25 @@ func (r *GormUserRepository) UsernameExists(username string, excludeID uuid.UUID
 
 func (r *GormUserRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
+}
+
+func (r *GormUserRepository) DeleteUser(id uuid.UUID) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Clean up related data
+		_ = tx.Where("user_id = ?", id).Delete(&model.UserInterest{}).Error
+		_ = tx.Where("follower_id = ? OR following_id = ?", id, id).Delete(&model.Follow{}).Error
+		_ = tx.Where("blocker_id = ? OR blocked_id = ?", id, id).Delete(&model.Block{}).Error
+		_ = tx.Where("user_id = ?", id).Delete(&model.UserInterest{}).Error
+		_ = tx.Where("sender_id = ?", id).Delete(&model.Message{}).Error
+		_ = tx.Where("user_id = ?", id).Delete(&model.ConversationParticipant{}).Error
+		_ = tx.Where("recipient_id = ? OR actor_id = ?", id, id).Delete(&model.Notification{}).Error
+		_ = tx.Where("reporter_id = ?", id).Delete(&model.Report{}).Error
+		_ = tx.Where("user_id = ?", id).Delete(&model.AuthOTP{}).Error
+		// Soft delete posts
+		_ = tx.Model(&model.Post{}).Where("user_id = ?", id).Update("deleted_at", gorm.Expr("now()")).Error
+		// Hard delete user
+		return tx.Delete(&model.User{}, "id = ?", id).Error
+	})
 }
 
 func (r *GormUserRepository) CountFollowers(userID uuid.UUID) (int64, error) {

@@ -44,6 +44,8 @@ func (f *fakeUserRepo) Update(user *model.User) error {
 	return nil
 }
 
+func (f *fakeUserRepo) DeleteUser(id uuid.UUID) error { f.user = nil; return nil }
+
 func (f *fakeUserRepo) GetInterests(userID uuid.UUID) ([]string, error) { return nil, nil }
 func (f *fakeUserRepo) SetInterests(userID uuid.UUID, interests []string) error { return nil }
 

@@ -109,6 +109,76 @@ func (s *PostService) Delete(userID, postID uuid.UUID) error {
 	return s.repo.DeletePost(postID, userID)
 }
 
-func buildPosts(posts []model.Post) []dto.PostResponse { out:=make([]dto.PostResponse,0,len(posts)); for _, p := range posts { out = append(out, dto.PostResponse{ID:p.ID.String(), UserID:p.UserID.String(), Caption:p.Caption, Location:p.Location, IsArchived:p.IsArchived, CommentsDisabled:p.CommentsDisabled, CreatedAt:p.CreatedAt})}; return out }
+func (s *PostService) RemoveTag(userID, postID, taggedUserID uuid.UUID) error {
+	exists, err := s.repo.PostExists(postID)
+	if err != nil { return err }
+	if !exists { return ErrPostNotFound }
+	owns, err := s.repo.OwnsPost(postID, userID)
+	if err != nil { return err }
+	if !owns { return ErrForbidden }
+	return s.repo.DeletePostTag(postID, taggedUserID)
+}
+
+// GetByID returns a single post with full detail (media, tags, hashtags, user).
+func (s *PostService) GetByID(userID, postID uuid.UUID) (*dto.PostResponse, error) {
+	if postID == uuid.Nil { return nil, ErrPostNotFound }
+	post, err := s.repo.GetPostByID(postID)
+	if err != nil { return nil, ErrPostNotFound }
+
+	// CNT-03: archived posts visible only to owner
+	if post.IsArchived && post.UserID != userID {
+		return nil, ErrPostNotFound
+	}
+
+	resp := &dto.PostResponse{
+		ID:               post.ID.String(),
+		UserID:           post.UserID.String(),
+		Caption:          post.Caption,
+		Location:         post.Location,
+		IsArchived:       post.IsArchived,
+		CommentsDisabled: post.CommentsDisabled,
+		CreatedAt:        post.CreatedAt,
+	}
+	if len(post.Media) > 0 {
+		resp.Media = make([]dto.PostMediaResponse, 0, len(post.Media))
+		for _, m := range post.Media {
+			resp.Media = append(resp.Media, dto.PostMediaResponse{
+				MediaURL:      m.MediaURL,
+				MediaType:     m.MediaType,
+				OrderIndex:    m.OrderIndex,
+				MusicTrackURL: m.MusicTrackURL,
+			})
+		}
+	}
+	return resp, nil
+}
+
+func buildPosts(posts []model.Post) []dto.PostResponse {
+	out := make([]dto.PostResponse, 0, len(posts))
+	for _, p := range posts {
+		resp := dto.PostResponse{
+			ID:               p.ID.String(),
+			UserID:           p.UserID.String(),
+			Caption:          p.Caption,
+			Location:         p.Location,
+			IsArchived:       p.IsArchived,
+			CommentsDisabled: p.CommentsDisabled,
+			CreatedAt:        p.CreatedAt,
+		}
+		if len(p.Media) > 0 {
+			resp.Media = make([]dto.PostMediaResponse, 0, len(p.Media))
+			for _, m := range p.Media {
+				resp.Media = append(resp.Media, dto.PostMediaResponse{
+					MediaURL:      m.MediaURL,
+					MediaType:     m.MediaType,
+					OrderIndex:    m.OrderIndex,
+					MusicTrackURL: m.MusicTrackURL,
+				})
+			}
+		}
+		out = append(out, resp)
+	}
+	return out
+}
 
 func cleanOptional(value *string) *string { if value == nil { return nil }; trimmed := strings.TrimSpace(*value); if trimmed == "" { return nil }; return &trimmed }

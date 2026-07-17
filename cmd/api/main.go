@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"twistgram-api-go/internal/config"
+	"twistgram-api-go/internal/constants"
 	"twistgram-api-go/internal/handler"
 	"twistgram-api-go/internal/middleware"
 	"twistgram-api-go/internal/model"
@@ -50,6 +51,7 @@ func main() {
 		&model.Notification{},
 		&model.Report{},
 		&model.AuthOTP{},
+		&model.SearchHistory{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to run migration: %v", err)
@@ -58,6 +60,9 @@ func main() {
 
 	// Setup Gin router
 	r := gin.Default()
+
+	// Request ID middleware (first in chain)
+	r.Use(middleware.RequestID())
 
 	// Use security headers
 	r.Use(middleware.SecurityHeaders())
@@ -69,7 +74,7 @@ func main() {
 	} else {
 		corsConfig.AllowOrigins = strings.Split(cfg.CORSAllowOrigins, ",")
 	}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-Request-ID"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	r.Use(cors.New(corsConfig))
 
@@ -88,21 +93,58 @@ func main() {
 		}
 
 		response.Success(c, gin.H{
-			"status":    "ok",
-			"database":  dbStatus,
-			"timestamp": time.Now().Format(time.RFC3339),
+			"status":     "ok",
+			"database":   dbStatus,
+			"request_id": middleware.GetRequestID(c),
+			"timestamp":  time.Now().Format(time.RFC3339),
 		})
 	})
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
 
-	// Public routes (no auth required)
+	// === Initialize repositories ===
 	authRepo := repository.NewAuthRepository(db)
-	authHandler := handler.NewAuthHandlerWithService(service.NewAuthService(authRepo, cfg))
+	userRepo := repository.NewUserRepository(db)
+	socialRepo := repository.NewSocialRepository(db)
+	postRepo := repository.NewPostRepository(db)
+	interactionRepo := repository.NewInteractionRepository(db)
+	storyRepo := repository.NewStoryRepository(db)
+	searchRepo := repository.NewSearchRepository(db)
+	dmRepo := repository.NewDMRepository(db)
+	notifRepo := repository.NewNotificationRepository(db)
+	highlightRepo := repository.NewHighlightRepository(db)
+	searchHistoryRepo := repository.NewSearchHistoryRepository(db)
+
+	// === Initialize services ===
+	authService := service.NewAuthService(authRepo, cfg)
+	userService := service.NewUserService(userRepo)
+	socialService := service.NewSocialService(socialRepo)
+	postService := service.NewPostService(postRepo)
+	interactionService := service.NewInteractionService(interactionRepo)
+	storyService := service.NewStoryService(storyRepo)
+	searchService := service.NewSearchService(searchRepo)
+	dmService := service.NewDMService(dmRepo)
+	notifService := service.NewNotificationService(notifRepo)
+	highlightService := service.NewHighlightService(highlightRepo)
+	searchHistoryService := service.NewSearchHistoryService(searchHistoryRepo)
+
+	// === Initialize handlers (DI pattern) ===
+	authHandler := handler.NewAuthHandlerWithService(authService)
+	userHandler := handler.NewUserHandlerWithService(userService)
+	socialHandler := handler.NewSocialHandlerWithService(socialService)
+	postHandler := handler.NewPostHandlerWithService(postService)
+	interactionHandler := handler.NewInteractionHandlerWithService(interactionService)
+	storyHandler := handler.NewStoryHandlerWithService(storyService)
+	searchHandler := handler.NewSearchHandlerWithService(searchService)
+	dmHandler := handler.NewDMHandlerWithService(dmService)
+	notifHandler := handler.NewNotificationHandlerWithService(notifService)
+	highlightHandler := handler.NewHighlightHandlerWithService(highlightService)
+	searchHistoryHandler := handler.NewSearchHistoryHandlerWithService(searchHistoryService)
+
+	// Public routes (no auth required)
 	public := v1.Group("")
-	// Apply rate limiting to public endpoints (5 req/sec, burst 10)
-	public.Use(middleware.RateLimit(5, 10))
+	public.Use(middleware.RateLimit(constants.RateLimitPublic, constants.RateBurstPublic))
 	{
 		public.POST("/auth/register", authHandler.Register)
 		public.GET("/auth/check-availability", authHandler.CheckAvailability)
@@ -114,27 +156,24 @@ func main() {
 		public.POST("/auth/forgot-password", authHandler.ForgotPassword)
 		public.POST("/auth/recover-username", authHandler.RecoverUsername)
 		public.POST("/auth/recover-email", authHandler.RecoverEmail)
+		public.POST("/auth/recover-email/complete", authHandler.CompleteRecoverEmail)
 		public.POST("/auth/reset-password", authHandler.ResetPassword)
 	}
 
 	// Protected routes (auth required)
-	userHandler := handler.NewUserHandler()
-	socialHandler := handler.NewSocialHandler()
-	postHandler := handler.NewPostHandler()
-	interactionHandler := handler.NewInteractionHandler()
-	storyHandler := handler.NewStoryHandler()
-	searchHandler := handler.NewSearchHandler()
-	dmHandler := handler.NewDMHandler()
-	notificationHandler := handler.NewNotificationHandler()
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
+		// Users & Profile
 		auth.GET("/users/me", userHandler.GetMe)
 		auth.PATCH("/users/me", userHandler.UpdateMe)
+		auth.DELETE("/users/me", userHandler.DeleteAccount)
 		auth.PATCH("/users/me/privacy", userHandler.UpdatePrivacy)
 		auth.GET("/users/me/interests", userHandler.GetInterests)
 		auth.PUT("/users/me/interests", userHandler.SetInterests)
 		auth.GET("/users/:identifier", userHandler.GetByUsername)
+
+		// Follow & Social
 		auth.POST("/users/:identifier/follow", socialHandler.Follow)
 		auth.DELETE("/users/:identifier/follow", socialHandler.Unfollow)
 		auth.GET("/users/:identifier/followers", socialHandler.Followers)
@@ -143,9 +182,20 @@ func main() {
 		auth.GET("/users/me/follow-requests", socialHandler.FollowRequests)
 		auth.POST("/users/:identifier/follow-requests/approve", socialHandler.ApproveFollowRequest)
 		auth.POST("/users/:identifier/follow-requests/decline", socialHandler.DeclineFollowRequest)
+
+		// Close Friends [ADV]
+		auth.POST("/users/:identifier/close-friends", socialHandler.AddCloseFriend)
+		auth.DELETE("/users/:identifier/close-friends", socialHandler.RemoveCloseFriend)
+		auth.GET("/users/me/close-friends", socialHandler.ListCloseFriends)
+
+		// Block & Report
 		auth.POST("/users/:identifier/block", socialHandler.Block)
 		auth.DELETE("/users/:identifier/block", socialHandler.Unblock)
+		auth.GET("/users/me/blocked", socialHandler.GetBlockedUsers)
 		auth.POST("/reports", socialHandler.Report)
+
+		// Posts
+		auth.GET("/posts/:id", postHandler.GetByID)
 		auth.POST("/posts", postHandler.Create)
 		auth.PATCH("/posts/:id", postHandler.EditCaption)
 		auth.GET("/feed", postHandler.Feed)
@@ -153,6 +203,9 @@ func main() {
 		auth.DELETE("/posts/:id", postHandler.Delete)
 		auth.POST("/posts/:id/archive", postHandler.Archive)
 		auth.POST("/posts/:id/unarchive", postHandler.Unarchive)
+		auth.DELETE("/posts/:id/tags/:taggedUserId", postHandler.RemoveTag)
+
+		// Interactions (Like, Comment, Save, Share)
 		auth.POST("/posts/:id/like", interactionHandler.LikePost)
 		auth.DELETE("/posts/:id/like", interactionHandler.UnlikePost)
 		auth.GET("/posts/:id/comments", interactionHandler.ListComments)
@@ -163,19 +216,45 @@ func main() {
 		auth.POST("/posts/:id/save", interactionHandler.SavePost)
 		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
 		auth.POST("/posts/:id/share", interactionHandler.SharePost)
+
+		// Stories
 		auth.POST("/stories", storyHandler.Create)
 		auth.DELETE("/stories/:id", storyHandler.Delete)
 		auth.GET("/stories/feed", storyHandler.Feed)
 		auth.GET("/stories/:id", storyHandler.GetByID)
 		auth.POST("/stories/:id/views", storyHandler.RecordView)
 		auth.GET("/stories/:id/viewers", storyHandler.Viewers)
+
+		// Story Highlights [ADV]
+		auth.GET("/highlights", highlightHandler.List)
+		auth.POST("/highlights", highlightHandler.Create)
+		auth.PATCH("/highlights/:id", highlightHandler.Update)
+		auth.DELETE("/highlights/:id", highlightHandler.Delete)
+		auth.POST("/highlights/:id/stories", highlightHandler.AddStory)
+		auth.DELETE("/highlights/:id/stories/:story_id", highlightHandler.RemoveStory)
+
+		// Search
 		auth.GET("/search", searchHandler.Search)
+		auth.GET("/hashtags/:tag/posts", searchHandler.HashtagPosts)
+
+		// Search History [ADV]
+		auth.GET("/search/history", searchHistoryHandler.List)
+		auth.POST("/search/history", searchHistoryHandler.Save)
+		auth.DELETE("/search/history/:id", searchHistoryHandler.DeleteItem)
+		auth.DELETE("/search/history", searchHistoryHandler.DeleteAll)
+
+		// Direct Messages
 		auth.GET("/conversations", dmHandler.ListConversations)
+		auth.GET("/conversations/requests", dmHandler.ListMessageRequests)
 		auth.POST("/conversations", dmHandler.StartConversation)
 		auth.GET("/conversations/:id/messages", dmHandler.ListMessages)
 		auth.POST("/conversations/:id/messages", dmHandler.SendMessage)
-		auth.GET("/notifications", notificationHandler.List)
-		auth.POST("/notifications/:id/read", notificationHandler.Read)
+
+		// Notifications
+		auth.GET("/notifications", notifHandler.List)
+		auth.POST("/notifications/read-all", notifHandler.ReadAll)
+		auth.POST("/notifications", notifHandler.Create)
+		auth.POST("/notifications/:id/read", notifHandler.Read)
 	}
 
 	// Start server
