@@ -85,5 +85,3 @@ func (r *GormSearchRepository) ListPostsByHashtag(tag string, viewerID uuid.UUID
 
 	return posts, total, err
 }
-
-// remove unused helper

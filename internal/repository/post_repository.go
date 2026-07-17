@@ -26,6 +26,10 @@ type PostRepository interface {
 	UserHashtagUpsert(tags []string) ([]model.Hashtag, error)
 	CreateNotification(notification *model.Notification) error
 	DeletePostTag(postID, taggedUserID uuid.UUID) error
+	// Visibility helpers for user profile posts
+	IsUserPrivate(userID uuid.UUID) (bool, error)
+	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
+	IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error)
 }
 
 type GormPostRepository struct{ db *gorm.DB }
@@ -180,4 +184,27 @@ func (r *GormPostRepository) DeletePostTag(postID, taggedUserID uuid.UUID) error
 
 func (r *GormPostRepository) CreateNotification(notification *model.Notification) error {
 	return r.db.Create(notification).Error
+}
+
+func (r *GormPostRepository) IsUserPrivate(userID uuid.UUID) (bool, error) {
+	var isPrivate bool
+	err := r.db.Model(&model.User{}).Select("is_private").Where("id = ?", userID).Scan(&isPrivate).Error
+	return isPrivate, err
+}
+
+func (r *GormPostRepository) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.Block{}).Where(
+		"(blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)",
+		userA, userB, userB, userA,
+	).Count(&count).Error
+	return count > 0, err
+}
+
+func (r *GormPostRepository) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.Model(&model.Follow{}).
+		Where("follower_id = ? AND following_id = ? AND status = ?", followerID, followingID, "accepted").
+		Count(&count).Error
+	return count > 0, err
 }

@@ -200,6 +200,7 @@ func main() {
 		auth.PATCH("/posts/:id", postHandler.EditCaption)
 		auth.GET("/feed", postHandler.Feed)
 		auth.GET("/users/me/posts", postHandler.MyPosts)
+		auth.GET("/users/:identifier/posts", postHandler.UserPosts)
 		auth.DELETE("/posts/:id", postHandler.Delete)
 		auth.POST("/posts/:id/archive", postHandler.Archive)
 		auth.POST("/posts/:id/unarchive", postHandler.Unarchive)

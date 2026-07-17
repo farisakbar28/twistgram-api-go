@@ -44,6 +44,19 @@ func (h *PostHandler) MyPosts(c *gin.Context) {
 	response.WithPagination(c, gin.H{"posts": items}, buildMeta(pg, lm, total))
 }
 
+func (h *PostHandler) UserPosts(c *gin.Context) {
+	viewerID, ok := authUser(c); if !ok { return }
+	targetID, ok := parsePostUserParam(c); if !ok { return }
+	pg := page(c)
+	lm := limit(c)
+	items, total, err := h.postService.UserPosts(viewerID, targetID, pg, lm)
+	if err != nil {
+		if errors.Is(err, service.ErrPostNotFound) { response.NotFound(c, "User not found") } else if errors.Is(err, service.ErrForbidden) { response.Forbidden(c, "You do not have access to this user's posts") } else { response.InternalError(c, "Failed to load user posts") }
+		return
+	}
+	response.WithPagination(c, gin.H{"posts": items}, buildMeta(pg, lm, total))
+}
+
 func (h *PostHandler) EditCaption(c *gin.Context) {
 	userID, ok := authUser(c); if !ok { return }
 	id, ok := parsePostID(c); if !ok { return }
@@ -101,6 +114,7 @@ func (h *PostHandler) RemoveTag(c *gin.Context) {
 
 func authUser(c *gin.Context) (uuid.UUID, bool) { id := middleware.GetUserID(c); if id == "" { response.Unauthorized(c, "User not authenticated"); return uuid.Nil, false }; parsed, err := uuid.Parse(id); if err != nil { response.Unauthorized(c, "Invalid authenticated user"); return uuid.Nil, false }; return parsed, true }
 func parsePostID(c *gin.Context) (uuid.UUID, bool) { id, err := uuid.Parse(c.Param("id")); if err != nil { response.BadRequest(c, "Invalid post id"); return uuid.Nil, false }; return id, true }
+func parsePostUserParam(c *gin.Context) (uuid.UUID, bool) { id, err := uuid.Parse(c.Param("identifier")); if err != nil { response.BadRequest(c, "Invalid user id"); return uuid.Nil, false }; return id, true }
 func page(c *gin.Context) int { p, _ := strconv.Atoi(c.DefaultQuery("page", "1")); if p < 1 { return 1 }; return p }
 func limit(c *gin.Context) int { l, _ := strconv.Atoi(c.DefaultQuery("limit", "20")); if l < 1 { return 20 }; if l > 100 { return 100 }; return l }
 func buildMeta(page, limit int, total int64) *response.Meta { totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }; return &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages} }

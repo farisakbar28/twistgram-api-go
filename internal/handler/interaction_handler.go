@@ -127,6 +127,4 @@ func parseCommentParam(c *gin.Context) (uuid.UUID, bool) {
 	return id, true
 }
 
-func parseCommentID(c *gin.Context) (uuid.UUID, bool) { id, err := uuid.Parse(c.Param("id")); if err != nil { response.BadRequest(c, "Invalid comment id"); return uuid.Nil, false }; return id, true }
-
 func _page(c *gin.Context) int { p, _ := strconv.Atoi(c.DefaultQuery("page", "1")); if p < 1 { return 1 }; return p }

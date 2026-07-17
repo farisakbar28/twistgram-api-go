@@ -78,6 +78,50 @@ func (s *PostService) Feed(userID uuid.UUID, page, limit int) ([]dto.PostRespons
 	return buildPosts(posts), total, nil
 }
 func (s *PostService) MyPosts(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) { posts, total, err := s.repo.ListUserPosts(userID, page, limit); if err != nil { return nil, 0, err }; return buildPosts(posts), total, nil }
+
+// UserPosts returns posts for a specific user with privacy and block checks.
+func (s *PostService) UserPosts(viewerID, targetUserID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+	if targetUserID == uuid.Nil { return nil, 0, ErrPostNotFound }
+
+	// If viewing own posts, show all non-archived
+	if viewerID == targetUserID {
+		posts, total, err := s.repo.ListUserPosts(targetUserID, page, limit)
+		if err != nil { return nil, 0, err }
+		return buildPosts(posts), total, nil
+	}
+
+	// Check if blocked (either direction)
+	blocked, err := s.repo.IsBlockedEitherDirection(viewerID, targetUserID)
+	if err != nil { return nil, 0, err }
+	if blocked { return nil, 0, ErrForbidden }
+
+	// Check if target is private
+	isPrivate, err := s.repo.IsUserPrivate(targetUserID)
+	if err != nil { return nil, 0, err }
+
+	// If private, check if viewer is accepted follower
+	if isPrivate {
+		isFollower, err := s.repo.IsAcceptedFollower(viewerID, targetUserID)
+		if err != nil { return nil, 0, err }
+		if !isFollower { return nil, 0, ErrForbidden }
+	}
+
+	posts, total, err := s.repo.ListUserPosts(targetUserID, page, limit)
+	if err != nil { return nil, 0, err }
+
+	// Filter out archived posts for non-owners
+	if len(posts) > 0 {
+		filtered := make([]model.Post, 0, len(posts))
+		for _, p := range posts {
+			if !p.IsArchived {
+				filtered = append(filtered, p)
+			}
+		}
+		return buildPosts(filtered), int64(len(filtered)), nil
+	}
+
+	return buildPosts(posts), total, nil
+}
 func (s *PostService) Archive(userID, postID uuid.UUID, archived bool) error {
 	exists, err := s.repo.PostExists(postID)
 	if err != nil { return err }
