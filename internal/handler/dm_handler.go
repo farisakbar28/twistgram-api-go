@@ -144,3 +144,22 @@ func totalPages(total int64, limit int) int {
 	}
 	return int((total + int64(limit) - 1) / int64(limit))
 }
+
+func (h *DMHandler) UnsendMessage(c *gin.Context) {
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	messageIDStr := c.Param("id")
+	messageID, err := uuid.Parse(messageIDStr)
+	if err != nil {
+		response.BadRequest(c, "Invalid message id")
+		return
+	}
+	if err := h.service.UnsendMessage(c.Request.Context(), userID, messageID); err != nil {
+		if handleDMError(c, err) {
+			return
+		}
+	}
+	response.Success(c, gin.H{"deleted": true})
+}

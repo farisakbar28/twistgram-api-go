@@ -26,6 +26,7 @@ type Config struct {
 	SMTPUsername      string
 	SMTPPassword      string
 	SMTPFromEmail     string
+	RedisURL          string
 }
 
 func LoadConfig() *Config {
@@ -45,6 +46,7 @@ func LoadConfig() *Config {
 		SMTPUsername:      getEnv("SMTP_USERNAME", ""),
 		SMTPPassword:      getEnv("SMTP_PASSWORD", ""),
 		SMTPFromEmail:     getEnv("SMTP_FROM_EMAIL", ""),
+		RedisURL:          getEnv("REDIS_URL", "redis://localhost:6379/0"),
 	}
 
 	if cfg.DatabaseURL == "" {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	redisPkg "twistgram-api-go/pkg/redis"
 	"log"
 	"net/http"
 	"strings"
@@ -24,6 +25,10 @@ func main() {
 
 	// Initialize database
 	db := config.InitDatabase(cfg)
+	var redisClient = redisPkg.Client
+	if cfg.RedisURL != "" {
+		redisClient = redisPkg.InitRedis(cfg.RedisURL)
+	}
 
 	// AutoMigrate all models
 	log.Println("Running database migration...")
@@ -115,12 +120,17 @@ func main() {
 	notifRepo := repository.NewNotificationRepository(db)
 	highlightRepo := repository.NewHighlightRepository(db)
 	searchHistoryRepo := repository.NewSearchHistoryRepository(db)
+	noteRepo := repository.NewNoteRepository(db)
+	var redisTimelineRepo repository.RedisTimelineRepository
+	if redisClient != nil {
+		redisTimelineRepo = repository.NewRedisTimelineRepository(redisClient)
+	}
 
 	// === Initialize services ===
 	authService := service.NewAuthService(authRepo, cfg)
 	userService := service.NewUserService(userRepo)
 	socialService := service.NewSocialService(socialRepo)
-	postService := service.NewPostService(postRepo)
+	postService := service.NewPostService(postRepo, redisTimelineRepo, userRepo)
 	interactionService := service.NewInteractionService(interactionRepo)
 	storyService := service.NewStoryService(storyRepo)
 	searchService := service.NewSearchService(searchRepo)
@@ -128,6 +138,7 @@ func main() {
 	notifService := service.NewNotificationService(notifRepo)
 	highlightService := service.NewHighlightService(highlightRepo)
 	searchHistoryService := service.NewSearchHistoryService(searchHistoryRepo)
+	noteService := service.NewNoteService(noteRepo)
 
 	// === Initialize handlers (DI pattern) ===
 	authHandler := handler.NewAuthHandlerWithService(authService)
@@ -141,6 +152,7 @@ func main() {
 	notifHandler := handler.NewNotificationHandlerWithService(notifService)
 	highlightHandler := handler.NewHighlightHandlerWithService(highlightService)
 	searchHistoryHandler := handler.NewSearchHistoryHandlerWithService(searchHistoryService)
+	noteHandler := handler.NewNoteHandlerWithService(noteService)
 
 	// Public routes (no auth required)
 	public := v1.Group("")
@@ -196,6 +208,7 @@ func main() {
 		auth.GET("/conversations/requests", dmHandler.ListMessageRequests)
 		auth.GET("/conversations/:id/messages", dmHandler.ListMessages)
 		auth.GET("/notifications", notifHandler.List)
+		auth.GET("/notes/active", noteHandler.GetActive)
 
 		// AUTH-02: Write operations require email verification
 		verified := v1.Group("")
@@ -260,6 +273,8 @@ func main() {
 			verified.POST("/notifications/read-all", notifHandler.ReadAll)
 			verified.POST("/notifications", notifHandler.Create)
 			verified.POST("/notifications/:id/read", notifHandler.Read)
+			verified.POST("/notes", noteHandler.Create)
+			verified.DELETE("/notes/:id", noteHandler.Delete)
 		}
 	}
 
@@ -270,4 +285,8 @@ func main() {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+
+
+
+
 

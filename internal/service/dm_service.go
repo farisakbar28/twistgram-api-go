@@ -221,3 +221,14 @@ func deref(s *string) string {
 	}
 	return *s
 }
+
+func (s *DMService) UnsendMessage(ctx context.Context, userID, messageID uuid.UUID) error {
+	msg, err := s.repo.GetMessageByID(ctx, messageID)
+	if err != nil {
+		return ErrConversationNotFound
+	}
+	if msg.SenderID != userID {
+		return ErrForbidden
+	}
+	return s.repo.DeleteMessage(ctx, messageID)
+}

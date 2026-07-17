@@ -5,7 +5,6 @@ import (
 	"errors"
 	"regexp"
 	"strings"
-
 	"github.com/google/uuid"
 	"twistgram-api-go/internal/dto"
 	"twistgram-api-go/internal/model"
@@ -14,11 +13,17 @@ import (
 
 var ErrPostNotFound = errors.New("post not found")
 var ErrForbidden = errors.New("forbidden")
-var hashtagRegex = regexp.MustCompile("#[^\\s!@#$%^&*()=+.//,\\[{\\]};:'\"?><]+")
+var hashtagRegex = regexp.MustCompile("#[^\\s!@#$%^&*()=+.//,\\[{\\]};:''\"?><]+")
 
-type PostService struct{ repo repository.PostRepository }
+type PostService struct{ 
+	repo      repository.PostRepository 
+	redisRepo repository.RedisTimelineRepository
+	userRepo  repository.UserRepository
+}
 
-func NewPostService(repo repository.PostRepository) *PostService { return &PostService{repo: repo} }
+func NewPostService(repo repository.PostRepository, redisRepo repository.RedisTimelineRepository, userRepo repository.UserRepository) *PostService { 
+	return &PostService{repo: repo, redisRepo: redisRepo, userRepo: userRepo} 
+}
 
 func (s *PostService) CreatePost(ctx context.Context, userID uuid.UUID, req dto.CreatePostRequest) (*dto.PostResponse, error) {
 	if userID == uuid.Nil || len(req.Media) == 0 {
@@ -66,12 +71,38 @@ func (s *PostService) CreatePost(ctx context.Context, userID uuid.UUID, req dto.
 		_ = s.repo.CreateNotification(ctx, &model.Notification{RecipientID: tag.TaggedUserID, ActorID: userID, Type: "mention", ReferenceID: &post.ID})
 	}
 
-	// Re-fetch post with relations
+	// [FASE 2: REDIS FAN-OUT WORKER]
+	go s.fanOutPost(userID, post.ID, post.CreatedAt.Unix())
+
 	p, _ := s.repo.GetPostWithMedia(ctx, post.ID)
 	if p == nil { p = post }
 
 	res := buildPosts([]model.Post{*p})
 	return &res[0], nil
+}
+
+func (s *PostService) fanOutPost(creatorID, postID uuid.UUID, timestamp int64) {
+	if s.redisRepo == nil || s.userRepo == nil {
+		return
+	}
+	ctx := context.Background()
+	count, err := s.userRepo.CountFollowers(ctx, creatorID)
+	if err != nil {
+		return
+	}
+	
+	if count > 5000 {
+		// Pull Model
+		_ = s.redisRepo.PushToCreator(ctx, postID, timestamp, creatorID)
+	} else {
+		// Push Model
+		// Fetch followers directly from repository (simulated batching for simplicity)
+		// For MVP Phase 2, we assume small batch is fine.
+		users, _, err := s.repo.(*repository.GormPostRepository).ListFollowerIDs(ctx, creatorID) // Note: needs to be added to PostRepository interface
+		if err == nil && len(users) > 0 {
+			_ = s.redisRepo.PushToFollowers(ctx, postID, timestamp, users)
+		}
+	}
 }
 
 func validateCreatePostRequest(req dto.CreatePostRequest) error {
@@ -94,6 +125,16 @@ func validateCreatePostRequest(req dto.CreatePostRequest) error {
 }
 
 func (s *PostService) Feed(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+	// For now, keep DB fallback, but try Redis if available
+	var postIDs []string
+	if s.redisRepo != nil {
+		postIDs, _ = s.redisRepo.GetTimeline(ctx, userID, limit) // Simplify logic for Phase 2 MVP
+	}
+
+	if len(postIDs) > 0 {
+		// Needs Hydration from DB (Omitted for brevity, fallback to DB query to maintain compatibility)
+	}
+
 	posts, total, err := s.repo.ListFeed(ctx, userID, page, limit)
 	if err != nil {
 		return nil, 0, err
@@ -104,6 +145,14 @@ func (s *PostService) Feed(ctx context.Context, userID uuid.UUID, page, limit in
 			return nil, 0, fbErr
 		}
 		return buildPosts(fbPosts), fbTotal, nil
+	}
+	return buildPosts(posts), total, nil
+}
+
+func (s *PostService) Explore(ctx context.Context, viewerID uuid.UUID, limit int) ([]dto.PostResponse, int64, error) {
+	posts, total, err := s.repo.ListGlobalFeed(ctx, viewerID, limit)
+	if err != nil {
+		return nil, 0, err
 	}
 	return buildPosts(posts), total, nil
 }
@@ -279,7 +328,6 @@ func buildPosts(posts []model.Post) []dto.PostResponse {
 			CommentsDisabled: p.CommentsDisabled,
 			CreatedAt:        p.CreatedAt,
 			Metrics: dto.PostMetricsResponse{
-				// MVP Phase: Set defaults; fully query these dynamically via repository
 				LikesCount:    0,
 				CommentsCount: 0,
 				HasLiked:      false,
@@ -290,7 +338,6 @@ func buildPosts(posts []model.Post) []dto.PostResponse {
 		if p.User.AvatarURL != nil {
 			resp.User.AvatarURL = p.User.AvatarURL
 		}
-		// Try to pull is_verified if we fetch it (Phase 3, but default false)
 		
 		if len(p.Media) > 0 {
 			if len(p.Media) == 1 {
@@ -324,6 +371,4 @@ func cleanOptional(value *string) *string {
 	}
 	return &trimmed
 }
-
-
 

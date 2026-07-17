@@ -23,6 +23,8 @@ type DMRepository interface {
 	FindConversationByID(ctx context.Context, id uuid.UUID) (*model.Conversation, error)
 	GetStoryOwner(ctx context.Context, storyID uuid.UUID) (uuid.UUID, error)
 	CreateNotification(ctx context.Context, notification *model.Notification) error
+	DeleteMessage(ctx context.Context, messageID uuid.UUID) error
+	GetMessageByID(ctx context.Context, messageID uuid.UUID) (*model.Message, error)
 }
 
 type GormDMRepository struct{ db *gorm.DB }
@@ -163,3 +165,16 @@ func (r *GormDMRepository) GetStoryOwner(ctx context.Context, storyID uuid.UUID)
 func (r *GormDMRepository) CreateNotification(ctx context.Context, notification *model.Notification) error {
 	return CreateNotificationHelper(ctx, r.db, notification)
 }
+
+func (r *GormDMRepository) GetMessageByID(ctx context.Context, messageID uuid.UUID) (*model.Message, error) {
+	var m model.Message
+	if err := r.db.WithContext(ctx).First(&m, "id = ?", messageID).Error; err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (r *GormDMRepository) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("id = ?", messageID).Delete(&model.Message{}).Error
+}
+

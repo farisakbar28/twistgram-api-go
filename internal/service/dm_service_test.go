@@ -122,6 +122,14 @@ func (f *fakeDMRepo) CreateNotification(ctx context.Context, notification *model
 	return nil
 }
 
+func (f *fakeDMRepo) GetMessageByID(ctx context.Context, messageID uuid.UUID) (*model.Message, error) {
+	return nil, errors.New("not found")
+}
+
+func (f *fakeDMRepo) DeleteMessage(ctx context.Context, messageID uuid.UUID) error {
+	return nil
+}
+
 func TestStartConversationBlockedFails(t *testing.T) {
 	userA := uuid.New()
 	userB := uuid.New()
@@ -161,3 +169,4 @@ func TestSendMessageWithStoryReply(t *testing.T) {
 		t.Fatal("expected notification sent to story owner")
 	}
 }
+

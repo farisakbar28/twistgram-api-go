@@ -27,10 +27,10 @@ type PostRepository interface {
 	UserHashtagUpsert(ctx context.Context, tags []string) ([]model.Hashtag, error)
 	CreateNotification(ctx context.Context, notification *model.Notification) error
 	DeletePostTag(ctx context.Context, postID, taggedUserID uuid.UUID) error
-	// Visibility helpers for user profile posts
 	IsUserPrivate(ctx context.Context, userID uuid.UUID) (bool, error)
 	IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error)
 	IsAcceptedFollower(ctx context.Context, followerID, followingID uuid.UUID) (bool, error)
+	ListFollowerIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, int64, error)
 }
 
 type GormPostRepository struct{ db *gorm.DB }
@@ -107,7 +107,9 @@ func (r *GormPostRepository) GetPostByID(ctx context.Context, id uuid.UUID) (*mo
 
 func (r *GormPostRepository) GetPostWithMedia(ctx context.Context, id uuid.UUID) (*model.Post, error) {
 	var post model.Post
-	if err := r.db.WithContext(ctx).Preload("Media").Preload("Tags").Preload("Hashtags").First(&post, "id = ? AND deleted_at IS NULL", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Media", func(db *gorm.DB) *gorm.DB {
+		return db.Order("order_index ASC")
+	}).Preload("Tags").Preload("Hashtags").First(&post, "id = ? AND deleted_at IS NULL", id).Error; err != nil {
 		return nil, err
 	}
 	return &post, nil
@@ -129,7 +131,9 @@ func (r *GormPostRepository) ListFeed(ctx context.Context, userID uuid.UUID, pag
 	if total == 0 {
 		return posts, 0, nil
 	}
-	err := query.Preload("User").Preload("Media").Preload("Tags").Preload("Hashtags").Order("posts.created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&posts).Error
+	err := query.Preload("User").Preload("Media", func(db *gorm.DB) *gorm.DB {
+		return db.Order("order_index ASC")
+	}).Preload("Tags").Preload("Hashtags").Order("posts.created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -145,7 +149,9 @@ func (r *GormPostRepository) ListGlobalFeed(ctx context.Context, viewerID uuid.U
 		return nil, 0, err
 	}
 	var posts []model.Post
-	err := query.Preload("User").Preload("Media").Order("posts.created_at DESC").Limit(limit).Find(&posts).Error
+	err := query.Preload("User").Preload("Media", func(db *gorm.DB) *gorm.DB {
+		return db.Order("order_index ASC")
+	}).Order("posts.created_at DESC").Limit(limit).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -156,7 +162,9 @@ func (r *GormPostRepository) ListUserPosts(ctx context.Context, userID uuid.UUID
 		return nil, 0, err
 	}
 	var posts []model.Post
-	err := query.Preload("Media").Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&posts).Error
+	err := query.Preload("Media", func(db *gorm.DB) *gorm.DB {
+		return db.Order("order_index ASC")
+	}).Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&posts).Error
 	return posts, total, err
 }
 
@@ -254,4 +262,15 @@ func (r *GormPostRepository) IsAcceptedFollower(ctx context.Context, followerID,
 		Where("follower_id = ? AND following_id = ? AND status = ?", followerID, followingID, "accepted").
 		Count(&count).Error
 	return count > 0, err
+}
+
+func (r *GormPostRepository) ListFollowerIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, int64, error) {
+	var ids []uuid.UUID
+	var total int64
+	query := r.db.WithContext(ctx).Model(&model.Follow{}).Where("following_id = ? AND status = ?", userID, "accepted")
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := query.Pluck("follower_id", &ids).Error
+	return ids, total, err
 }

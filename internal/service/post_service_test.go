@@ -104,15 +104,14 @@ func (f *fakePostRepo) IsUserPrivate(ctx context.Context, userID uuid.UUID) (boo
 func (f *fakePostRepo) IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
 	return f.blocked, nil
 }
-func (f *fakePostRepo) IsAcceptedFollower(ctx context.Context, followerID, followingID uuid.UUID) (bool, error) {
-	return f.isFollower, nil
-}
+func (f *fakePostRepo) IsAcceptedFollower(ctx context.Context, followerID, followingID uuid.UUID) (bool, error) { return f.isFollower, nil }
+func (f *fakePostRepo) ListFollowerIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, int64, error) { return nil, 0, nil }
 
 func TestUserPostsBlockedForbidden(t *testing.T) {
 	viewerID := uuid.New()
 	targetID := uuid.New()
 	repo := &fakePostRepo{blocked: true}
-	svc := NewPostService(repo)
+	svc := NewPostService(repo, nil, nil)
 
 	_, _, err := svc.UserPosts(context.Background(), viewerID, targetID, 1, 20)
 	if !errors.Is(err, ErrForbidden) {
@@ -124,7 +123,7 @@ func TestUserPostsPrivateNonFollowerForbidden(t *testing.T) {
 	viewerID := uuid.New()
 	targetID := uuid.New()
 	repo := &fakePostRepo{isPrivate: true, isFollower: false}
-	svc := NewPostService(repo)
+	svc := NewPostService(repo, nil, nil)
 
 	_, _, err := svc.UserPosts(context.Background(), viewerID, targetID, 1, 20)
 	if !errors.Is(err, ErrForbidden) {
@@ -135,7 +134,7 @@ func TestUserPostsPrivateNonFollowerForbidden(t *testing.T) {
 func TestCreatePostWithMedia(t *testing.T) {
 	userID := uuid.New()
 	repo := &fakePostRepo{}
-	svc := NewPostService(repo)
+	svc := NewPostService(repo, nil, nil)
 
 	cap := "Hello world #twistgram"
 	req := dto.CreatePostRequest{
@@ -156,4 +155,6 @@ func TestCreatePostWithMedia(t *testing.T) {
 		t.Fatal("expected post created in repository")
 	}
 }
+
+
 
