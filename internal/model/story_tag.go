@@ -11,8 +11,8 @@ type StoryTag struct {
 	TaggedUserID uuid.UUID `gorm:"type:uuid;not null;index" json:"tagged_user_id"`
 
 	// Relations
-	Story       Story `gorm:"foreignKey:StoryID" json:"story,omitempty"`
-	TaggedUser  User  `gorm:"foreignKey:TaggedUserID" json:"tagged_user,omitempty"`
+	Story      Story `gorm:"foreignKey:StoryID" json:"story,omitempty"`
+	TaggedUser User  `gorm:"foreignKey:TaggedUserID" json:"tagged_user,omitempty"`
 }
 
 func (StoryTag) TableName() string {

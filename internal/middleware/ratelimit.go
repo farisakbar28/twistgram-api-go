@@ -35,7 +35,9 @@ func getVisitor(ip string, r rate.Limit, b int) *rate.Limiter {
 			// Bersihkan paksa map secara asinkron jika terlalu penuh
 			go func() {
 				mtx.Lock()
-				for k := range visitors { delete(visitors, k) }
+				for k := range visitors {
+					delete(visitors, k)
+				}
 				mtx.Unlock()
 			}()
 		}
@@ -77,7 +79,7 @@ func RateLimit(r rate.Limit, b int) gin.HandlerFunc {
 
 		if !limiter.Allow() {
 			// Estimate wait time: token refill rate is r tokens/sec
-			retryAfter := int(1.0 / float64(r)) + 1 // at least 1 second
+			retryAfter := int(1.0/float64(r)) + 1 // at least 1 second
 			c.Header("Retry-After", strconv.Itoa(retryAfter))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{

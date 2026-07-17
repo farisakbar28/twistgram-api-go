@@ -17,37 +17,67 @@ func NewNotificationHandlerWithService(svc *service.NotificationService) *Notifi
 }
 
 func (h *NotificationHandler) ReadAll(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	if err := h.service.MarkAllRead(userID); err != nil { response.InternalError(c, "Failed to mark notifications read"); return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	if err := h.service.MarkAllRead(userID); err != nil {
+		response.InternalError(c, "Failed to mark notifications read")
+		return
+	}
 	response.Success(c, gin.H{"read_all": true})
 }
 
 func (h *NotificationHandler) Create(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	var req dto.CreateNotificationRequest
-	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
-	if err := h.service.Create(userID, req); err != nil { response.InternalError(c, "Failed to create notification"); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+	}
+	if err := h.service.Create(userID, req); err != nil {
+		response.InternalError(c, "Failed to create notification")
+		return
+	}
 	response.Created(c, gin.H{"created": true})
 }
 
 func (h *NotificationHandler) List(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	page := queryIntDM(c, "page", 1)
 	limit := queryIntDM(c, "limit", 20)
 	items, total, err := h.service.List(userID, page, limit)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.WithPagination(c, gin.H{"notifications": items}, &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages(total, limit)})
 }
 
 func (h *NotificationHandler) Read(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	notificationID, ok := parseNotificationID(c); if !ok { return }
-	if h.handleError(c, h.service.MarkRead(userID, notificationID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	notificationID, ok := parseNotificationID(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.MarkRead(userID, notificationID)) {
+		return
+	}
 	response.Success(c, gin.H{"read": true})
 }
 
 func (h *NotificationHandler) handleError(c *gin.Context, err error) bool {
-	if err == nil { return false }
+	if err == nil {
+		return false
+	}
 	switch {
 	case errors.Is(err, service.ErrInvalidInput):
 		response.BadRequest(c, "Invalid request data")
@@ -59,4 +89,11 @@ func (h *NotificationHandler) handleError(c *gin.Context, err error) bool {
 	return true
 }
 
-func parseNotificationID(c *gin.Context) (uuid.UUID, bool) { id, err := uuid.Parse(c.Param("id")); if err != nil { response.BadRequest(c, "Invalid notification id"); return uuid.Nil, false }; return id, true }
+func parseNotificationID(c *gin.Context) (uuid.UUID, bool) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		response.BadRequest(c, "Invalid notification id")
+		return uuid.Nil, false
+	}
+	return id, true
+}

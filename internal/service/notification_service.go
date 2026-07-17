@@ -12,15 +12,23 @@ import (
 
 var ErrNotificationNotFound = errors.New("notification not found")
 
-type NotificationService struct{ repo repository.NotificationRepository }
+type NotificationService struct {
+	repo repository.NotificationRepository
+}
 
-func NewNotificationService(repo repository.NotificationRepository) *NotificationService { return &NotificationService{repo: repo} }
+func NewNotificationService(repo repository.NotificationRepository) *NotificationService {
+	return &NotificationService{repo: repo}
+}
 
 func (s *NotificationService) List(recipientID uuid.UUID, page, limit int) ([]dto.NotificationResponse, int64, error) {
-	if recipientID == uuid.Nil { return nil, 0, ErrInvalidInput }
+	if recipientID == uuid.Nil {
+		return nil, 0, ErrInvalidInput
+	}
 	page, limit = normalizePagination(page, limit)
 	notifs, total, err := s.repo.ListByRecipient(recipientID, page, limit)
-	if err != nil { return nil, 0, err }
+	if err != nil {
+		return nil, 0, err
+	}
 	out := make([]dto.NotificationResponse, 0, len(notifs))
 	for _, n := range notifs {
 		out = append(out, buildNotificationResponse(n))
@@ -29,24 +37,38 @@ func (s *NotificationService) List(recipientID uuid.UUID, page, limit int) ([]dt
 }
 
 func (s *NotificationService) MarkRead(recipientID, notificationID uuid.UUID) error {
-	if recipientID == uuid.Nil || notificationID == uuid.Nil { return ErrInvalidInput }
-	if err := s.repo.MarkRead(notificationID, recipientID); errors.Is(err, gorm.ErrRecordNotFound) { return ErrNotificationNotFound } else if err != nil { return err }
+	if recipientID == uuid.Nil || notificationID == uuid.Nil {
+		return ErrInvalidInput
+	}
+	if err := s.repo.MarkRead(notificationID, recipientID); errors.Is(err, gorm.ErrRecordNotFound) {
+		return ErrNotificationNotFound
+	} else if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (s *NotificationService) MarkAllRead(recipientID uuid.UUID) error {
-	if recipientID == uuid.Nil { return ErrInvalidInput }
+	if recipientID == uuid.Nil {
+		return ErrInvalidInput
+	}
 	return s.repo.MarkAllRead(recipientID)
 }
 
 func (s *NotificationService) Create(actorID uuid.UUID, req dto.CreateNotificationRequest) error {
-	if actorID == uuid.Nil { return ErrInvalidInput }
+	if actorID == uuid.Nil {
+		return ErrInvalidInput
+	}
 	recID, err := uuid.Parse(req.RecipientID)
-	if err != nil { return errors.New("invalid recipient_id") }
+	if err != nil {
+		return errors.New("invalid recipient_id")
+	}
 	var refID *uuid.UUID
 	if req.ReferenceID != nil {
 		tmp, err := uuid.Parse(*req.ReferenceID)
-		if err == nil { refID = &tmp }
+		if err == nil {
+			refID = &tmp
+		}
 	}
 	notif := &model.Notification{RecipientID: recID, ActorID: actorID, Type: req.Type, ReferenceID: refID}
 	return s.repo.CreateNotification(notif)
@@ -54,6 +76,9 @@ func (s *NotificationService) Create(actorID uuid.UUID, req dto.CreateNotificati
 
 func buildNotificationResponse(n model.Notification) dto.NotificationResponse {
 	var ref *string
-	if n.ReferenceID != nil { v := n.ReferenceID.String(); ref = &v }
+	if n.ReferenceID != nil {
+		v := n.ReferenceID.String()
+		ref = &v
+	}
 	return dto.NotificationResponse{ID: n.ID.String(), RecipientID: n.RecipientID.String(), ActorID: n.ActorID.String(), Type: n.Type, ReferenceID: ref, IsRead: n.IsRead, CreatedAt: n.CreatedAt}
 }

@@ -3,11 +3,11 @@ package dto
 import "time"
 
 type CreateStoryRequest struct {
-	MediaURL       *string  `json:"media_url"`
-	MediaType      string   `json:"media_type" binding:"required"`
-	TextContent    *string  `json:"text_content"`
-	MusicTrackURL  *string  `json:"music_track_url"`
-	TaggedUserIDs  []string `json:"tagged_user_ids"`
+	MediaURL      *string  `json:"media_url"`
+	MediaType     string   `json:"media_type" binding:"required"`
+	TextContent   *string  `json:"text_content"`
+	MusicTrackURL *string  `json:"music_track_url"`
+	TaggedUserIDs []string `json:"tagged_user_ids"`
 }
 
 type StoryResponse struct {
@@ -22,11 +22,11 @@ type StoryResponse struct {
 }
 
 type StoryViewerResponse struct {
-	ViewerID string    `json:"viewer_id"`
-	Name     string    `json:"name"`
-	Username string    `json:"username"`
-	AvatarURL *string  `json:"avatar_url,omitempty"`
-	ViewedAt time.Time `json:"viewed_at"`
+	ViewerID  string    `json:"viewer_id"`
+	Name      string    `json:"name"`
+	Username  string    `json:"username"`
+	AvatarURL *string   `json:"avatar_url,omitempty"`
+	ViewedAt  time.Time `json:"viewed_at"`
 }
 
 type StoryFeedItem struct {

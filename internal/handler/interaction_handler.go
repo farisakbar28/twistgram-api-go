@@ -19,91 +19,179 @@ func NewInteractionHandlerWithService(svc *service.InteractionService) *Interact
 }
 
 func (h *InteractionHandler) LikePost(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
 	res, err := h.service.LikePost(userID, postID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"like": res})
 }
 
 func (h *InteractionHandler) UnlikePost(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
-	if h.handleError(c, h.service.UnlikePost(userID, postID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.UnlikePost(userID, postID)) {
+		return
+	}
 	response.Success(c, gin.H{"unliked": true})
 }
 
 func (h *InteractionHandler) Comment(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
 	var req dto.CreateCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+	}
 	res, err := h.service.CreateComment(userID, postID, req)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Created(c, gin.H{"comment": res})
 }
 
 func (h *InteractionHandler) ListComments(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
 	page := _page(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	items, total, err := h.service.ListComments(userID, postID, page, limit)
-	if h.handleError(c, err) { return }
-	totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }
+	if h.handleError(c, err) {
+		return
+	}
+	totalPages := 0
+	if limit > 0 && total > 0 {
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
 	response.WithPagination(c, gin.H{"comments": items}, &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages})
 }
 
 func (h *InteractionHandler) ListSavedPosts(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	page := _page(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	items, total, err := h.service.ListSavedPosts(userID, page, limit)
-	if h.handleError(c, err) { return }
-	totalPages := 0; if limit > 0 && total > 0 { totalPages = int((total + int64(limit) - 1) / int64(limit)) }
+	if h.handleError(c, err) {
+		return
+	}
+	totalPages := 0
+	if limit > 0 && total > 0 {
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
 	response.WithPagination(c, gin.H{"saved_posts": items}, &response.Meta{Page: page, Limit: limit, Total: total, TotalPages: totalPages})
 }
 
 func (h *InteractionHandler) SharePost(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
 	res, err := h.service.SharePost(userID, postID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"share": res})
 }
 
 func (h *InteractionHandler) DeleteComment(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	commentID, ok := parseCommentParam(c); if !ok { return }
-	if h.handleError(c, h.service.DeleteComment(userID, commentID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	commentID, ok := parseCommentParam(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.DeleteComment(userID, commentID)) {
+		return
+	}
 	response.Success(c, gin.H{"deleted": true})
 }
 
 func (h *InteractionHandler) LikeComment(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	commentID, ok := parseCommentParam(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	commentID, ok := parseCommentParam(c)
+	if !ok {
+		return
+	}
 	res, err := h.service.LikeComment(userID, commentID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"like": res})
 }
 
 func (h *InteractionHandler) SavePost(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
 	res, err := h.service.SavePost(userID, postID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"save": res})
 }
 
 func (h *InteractionHandler) UnsavePost(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	postID, ok := parsePostID(c); if !ok { return }
-	if h.handleError(c, h.service.UnsavePost(userID, postID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	postID, ok := parsePostID(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.UnsavePost(userID, postID)) {
+		return
+	}
 	response.Success(c, gin.H{"unsaved": true})
 }
 
 func (h *InteractionHandler) handleError(c *gin.Context, err error) bool {
-	if err == nil { return false }
+	if err == nil {
+		return false
+	}
 	switch {
 	case errors.Is(err, service.ErrInvalidInput):
 		response.BadRequest(c, "Invalid request data")
@@ -123,8 +211,17 @@ func (h *InteractionHandler) handleError(c *gin.Context, err error) bool {
 
 func parseCommentParam(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("comment_id"))
-	if err != nil { response.BadRequest(c, "Invalid comment id"); return uuid.Nil, false }
+	if err != nil {
+		response.BadRequest(c, "Invalid comment id")
+		return uuid.Nil, false
+	}
 	return id, true
 }
 
-func _page(c *gin.Context) int { p, _ := strconv.Atoi(c.DefaultQuery("page", "1")); if p < 1 { return 1 }; return p }
+func _page(c *gin.Context) int {
+	p, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if p < 1 {
+		return 1
+	}
+	return p
+}

@@ -34,15 +34,17 @@ func GenerateOTP() (string, error) {
 }
 
 // GenerateJWT membuat Access Token dan Refresh Token JWT.
-func GenerateJWT(userID uuid.UUID, email, secret string) (accessToken, refreshToken string, err error) {
+func GenerateJWT(userID uuid.UUID, email string, emailVerified bool, tokenVersion int, secret string) (accessToken, refreshToken string, err error) {
 	// Access Token (berlaku 1 jam)
 	accessClaims := jwt.MapClaims{
-		"sub":   userID.String(),
-		"email": email,
-		"aud":   "authenticated",
-		"role":  "authenticated",
-		"iat":   time.Now().Unix(),
-		"exp":   time.Now().Add(time.Hour).Unix(),
+		"sub":            userID.String(),
+		"email":          email,
+		"email_verified": emailVerified,
+		"token_version":  tokenVersion,
+		"aud":            "authenticated",
+		"role":           "authenticated",
+		"iat":            time.Now().Unix(),
+		"exp":            time.Now().Add(time.Hour).Unix(),
 	}
 	at := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessToken, err = at.SignedString([]byte(secret))

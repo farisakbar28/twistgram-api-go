@@ -16,31 +16,58 @@ func NewSearchHistoryHandlerWithService(svc *service.SearchHistoryService) *Sear
 }
 
 func (h *SearchHistoryHandler) List(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	items, err := h.service.ListHistory(userID, limit)
-	if err != nil { response.InternalError(c, "Failed to load search history"); return }
+	if err != nil {
+		response.InternalError(c, "Failed to load search history")
+		return
+	}
 	response.Success(c, gin.H{"history": items})
 }
 
 func (h *SearchHistoryHandler) Save(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	query := c.Query("q")
 	queryType := c.DefaultQuery("type", "user")
-	if err := h.service.SaveSearch(userID, query, queryType); err != nil { response.BadRequest(c, "Invalid request"); return }
+	if err := h.service.SaveSearch(userID, query, queryType); err != nil {
+		response.BadRequest(c, "Invalid request")
+		return
+	}
 	response.Success(c, gin.H{"saved": true})
 }
 
 func (h *SearchHistoryHandler) DeleteItem(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	itemID, err := uuid.Parse(c.Param("id"))
-	if err != nil { response.BadRequest(c, "Invalid history id"); return }
-	if err := h.service.DeleteHistoryItem(userID, itemID); err != nil { response.InternalError(c, "Failed to delete history item"); return }
+	if err != nil {
+		response.BadRequest(c, "Invalid history id")
+		return
+	}
+	if err := h.service.DeleteHistoryItem(userID, itemID); err != nil {
+		response.InternalError(c, "Failed to delete history item")
+		return
+	}
 	response.Success(c, gin.H{"deleted": true})
 }
 
 func (h *SearchHistoryHandler) DeleteAll(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	if err := h.service.DeleteAllHistory(userID); err != nil { response.InternalError(c, "Failed to delete history"); return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	if err := h.service.DeleteAllHistory(userID); err != nil {
+		response.InternalError(c, "Failed to delete history")
+		return
+	}
 	response.Success(c, gin.H{"deleted": true})
 }

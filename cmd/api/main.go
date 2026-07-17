@@ -164,7 +164,7 @@ func main() {
 	auth := v1.Group("")
 	auth.Use(middleware.AuthRequired())
 	{
-		// Users & Profile
+		// Users & Profile (readable by unverified)
 		auth.GET("/users/me", userHandler.GetMe)
 		auth.PATCH("/users/me", userHandler.UpdateMe)
 		auth.DELETE("/users/me", userHandler.DeleteAccount)
@@ -173,89 +173,94 @@ func main() {
 		auth.PUT("/users/me/interests", userHandler.SetInterests)
 		auth.GET("/users/:identifier", userHandler.GetByUsername)
 
-		// Follow & Social
-		auth.POST("/users/:identifier/follow", socialHandler.Follow)
-		auth.DELETE("/users/:identifier/follow", socialHandler.Unfollow)
-		auth.GET("/users/:identifier/followers", socialHandler.Followers)
-		auth.GET("/users/:identifier/following", socialHandler.Following)
-		auth.DELETE("/users/:identifier/followers", socialHandler.RemoveFollower)
-		auth.GET("/users/me/follow-requests", socialHandler.FollowRequests)
-		auth.POST("/users/:identifier/follow-requests/approve", socialHandler.ApproveFollowRequest)
-		auth.POST("/users/:identifier/follow-requests/decline", socialHandler.DeclineFollowRequest)
-
-		// Close Friends [ADV]
-		auth.POST("/users/:identifier/close-friends", socialHandler.AddCloseFriend)
-		auth.DELETE("/users/:identifier/close-friends", socialHandler.RemoveCloseFriend)
-		auth.GET("/users/me/close-friends", socialHandler.ListCloseFriends)
-
-		// Block & Report
-		auth.POST("/users/:identifier/block", socialHandler.Block)
-		auth.DELETE("/users/:identifier/block", socialHandler.Unblock)
-		auth.GET("/users/me/blocked", socialHandler.GetBlockedUsers)
-		auth.POST("/reports", socialHandler.Report)
-
-		// Posts
-		auth.GET("/posts/:id", postHandler.GetByID)
-		auth.POST("/posts", postHandler.Create)
-		auth.PATCH("/posts/:id", postHandler.EditCaption)
+		// Read-only routes (accessible to unverified users)
 		auth.GET("/feed", postHandler.Feed)
+		auth.GET("/posts/:id", postHandler.GetByID)
 		auth.GET("/users/me/posts", postHandler.MyPosts)
 		auth.GET("/users/:identifier/posts", postHandler.UserPosts)
-		auth.DELETE("/posts/:id", postHandler.Delete)
-		auth.POST("/posts/:id/archive", postHandler.Archive)
-		auth.POST("/posts/:id/unarchive", postHandler.Unarchive)
-		auth.DELETE("/posts/:id/tags/:taggedUserId", postHandler.RemoveTag)
-
-		// Interactions (Like, Comment, Save, Share)
-		auth.POST("/posts/:id/like", interactionHandler.LikePost)
-		auth.DELETE("/posts/:id/like", interactionHandler.UnlikePost)
+		auth.GET("/users/:identifier/followers", socialHandler.Followers)
+		auth.GET("/users/:identifier/following", socialHandler.Following)
+		auth.GET("/users/me/follow-requests", socialHandler.FollowRequests)
+		auth.GET("/users/me/close-friends", socialHandler.ListCloseFriends)
+		auth.GET("/users/me/blocked", socialHandler.GetBlockedUsers)
 		auth.GET("/posts/:id/comments", interactionHandler.ListComments)
-		auth.POST("/posts/:id/comments", interactionHandler.Comment)
-		auth.DELETE("/posts/:id/comments/:comment_id", interactionHandler.DeleteComment)
-		auth.POST("/posts/:id/comments/:comment_id/like", interactionHandler.LikeComment)
 		auth.GET("/users/me/saved", interactionHandler.ListSavedPosts)
-		auth.POST("/posts/:id/save", interactionHandler.SavePost)
-		auth.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
-		auth.POST("/posts/:id/share", interactionHandler.SharePost)
-
-		// Stories
-		auth.POST("/stories", storyHandler.Create)
-		auth.DELETE("/stories/:id", storyHandler.Delete)
 		auth.GET("/stories/feed", storyHandler.Feed)
 		auth.GET("/stories/:id", storyHandler.GetByID)
-		auth.POST("/stories/:id/views", storyHandler.RecordView)
 		auth.GET("/stories/:id/viewers", storyHandler.Viewers)
-
-		// Story Highlights [ADV]
 		auth.GET("/highlights", highlightHandler.List)
-		auth.POST("/highlights", highlightHandler.Create)
-		auth.PATCH("/highlights/:id", highlightHandler.Update)
-		auth.DELETE("/highlights/:id", highlightHandler.Delete)
-		auth.POST("/highlights/:id/stories", highlightHandler.AddStory)
-		auth.DELETE("/highlights/:id/stories/:story_id", highlightHandler.RemoveStory)
-
-		// Search
 		auth.GET("/search", searchHandler.Search)
 		auth.GET("/hashtags/:tag/posts", searchHandler.HashtagPosts)
-
-		// Search History [ADV]
 		auth.GET("/search/history", searchHistoryHandler.List)
-		auth.POST("/search/history", searchHistoryHandler.Save)
-		auth.DELETE("/search/history/:id", searchHistoryHandler.DeleteItem)
-		auth.DELETE("/search/history", searchHistoryHandler.DeleteAll)
-
-		// Direct Messages
 		auth.GET("/conversations", dmHandler.ListConversations)
 		auth.GET("/conversations/requests", dmHandler.ListMessageRequests)
-		auth.POST("/conversations", dmHandler.StartConversation)
 		auth.GET("/conversations/:id/messages", dmHandler.ListMessages)
-		auth.POST("/conversations/:id/messages", dmHandler.SendMessage)
-
-		// Notifications
 		auth.GET("/notifications", notifHandler.List)
-		auth.POST("/notifications/read-all", notifHandler.ReadAll)
-		auth.POST("/notifications", notifHandler.Create)
-		auth.POST("/notifications/:id/read", notifHandler.Read)
+
+		// AUTH-02: Write operations require email verification
+		verified := v1.Group("")
+		verified.Use(middleware.AuthRequired(), middleware.EmailVerifiedRequired())
+		{
+			// Follow & Social
+			verified.POST("/users/:identifier/follow", socialHandler.Follow)
+			verified.DELETE("/users/:identifier/follow", socialHandler.Unfollow)
+			verified.DELETE("/users/:identifier/followers", socialHandler.RemoveFollower)
+			verified.POST("/users/:identifier/follow-requests/approve", socialHandler.ApproveFollowRequest)
+			verified.POST("/users/:identifier/follow-requests/decline", socialHandler.DeclineFollowRequest)
+
+			// Close Friends [ADV]
+			verified.POST("/users/:identifier/close-friends", socialHandler.AddCloseFriend)
+			verified.DELETE("/users/:identifier/close-friends", socialHandler.RemoveCloseFriend)
+
+			// Block & Report
+			verified.POST("/users/:identifier/block", socialHandler.Block)
+			verified.DELETE("/users/:identifier/block", socialHandler.Unblock)
+			verified.POST("/reports", socialHandler.Report)
+
+			// Posts (write)
+			verified.POST("/posts", postHandler.Create)
+			verified.PATCH("/posts/:id", postHandler.EditCaption)
+			verified.DELETE("/posts/:id", postHandler.Delete)
+			verified.POST("/posts/:id/archive", postHandler.Archive)
+			verified.POST("/posts/:id/unarchive", postHandler.Unarchive)
+			verified.DELETE("/posts/:id/tags/:taggedUserId", postHandler.RemoveTag)
+
+			// Interactions (write)
+			verified.POST("/posts/:id/like", interactionHandler.LikePost)
+			verified.DELETE("/posts/:id/like", interactionHandler.UnlikePost)
+			verified.POST("/posts/:id/comments", interactionHandler.Comment)
+			verified.DELETE("/posts/:id/comments/:comment_id", interactionHandler.DeleteComment)
+			verified.POST("/posts/:id/comments/:comment_id/like", interactionHandler.LikeComment)
+			verified.POST("/posts/:id/save", interactionHandler.SavePost)
+			verified.DELETE("/posts/:id/save", interactionHandler.UnsavePost)
+			verified.POST("/posts/:id/share", interactionHandler.SharePost)
+
+			// Stories (write)
+			verified.POST("/stories", storyHandler.Create)
+			verified.DELETE("/stories/:id", storyHandler.Delete)
+			verified.POST("/stories/:id/views", storyHandler.RecordView)
+
+			// Story Highlights [ADV] (write)
+			verified.POST("/highlights", highlightHandler.Create)
+			verified.PATCH("/highlights/:id", highlightHandler.Update)
+			verified.DELETE("/highlights/:id", highlightHandler.Delete)
+			verified.POST("/highlights/:id/stories", highlightHandler.AddStory)
+			verified.DELETE("/highlights/:id/stories/:story_id", highlightHandler.RemoveStory)
+
+			// Search History [ADV] (write)
+			verified.POST("/search/history", searchHistoryHandler.Save)
+			verified.DELETE("/search/history/:id", searchHistoryHandler.DeleteItem)
+			verified.DELETE("/search/history", searchHistoryHandler.DeleteAll)
+
+			// Direct Messages (write)
+			verified.POST("/conversations", dmHandler.StartConversation)
+			verified.POST("/conversations/:id/messages", dmHandler.SendMessage)
+
+			// Notifications (write)
+			verified.POST("/notifications/read-all", notifHandler.ReadAll)
+			verified.POST("/notifications", notifHandler.Create)
+			verified.POST("/notifications/:id/read", notifHandler.Read)
+		}
 	}
 
 	// Start server

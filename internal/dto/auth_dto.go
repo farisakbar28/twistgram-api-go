@@ -14,9 +14,9 @@ type LoginRequest struct {
 }
 
 type VerifyOTPRequest struct {
-	Email  string `json:"email" binding:"required,email"`
-	Token  string `json:"token" binding:"required"`
-	Type   string `json:"type" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+	Token string `json:"token" binding:"required"`
+	Type  string `json:"type" binding:"required"`
 }
 
 type ResendOTPRequest struct {
@@ -55,7 +55,6 @@ type RefreshTokenRequest struct {
 }
 
 type AuthSessionResponse struct {
-
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token,omitempty"`
 	TokenType    string `json:"token_type,omitempty"`

@@ -35,7 +35,9 @@ type InteractionRepository interface {
 
 type GormInteractionRepository struct{ db *gorm.DB }
 
-func NewInteractionRepository(db *gorm.DB) InteractionRepository { return &GormInteractionRepository{db: db} }
+func NewInteractionRepository(db *gorm.DB) InteractionRepository {
+	return &GormInteractionRepository{db: db}
+}
 
 func (r *GormInteractionRepository) PostExists(id uuid.UUID) (bool, error) {
 	var count int64
@@ -51,23 +53,35 @@ func (r *GormInteractionRepository) CommentExists(id uuid.UUID) (bool, error) {
 
 func (r *GormInteractionRepository) FindCommentByID(id uuid.UUID) (*model.Comment, error) {
 	var c model.Comment
-	if err := r.db.First(&c, "id = ? AND deleted_at IS NULL", id).Error; err != nil { return nil, err }
+	if err := r.db.First(&c, "id = ? AND deleted_at IS NULL", id).Error; err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
-func (r *GormInteractionRepository) CreateComment(comment *model.Comment) error { return r.db.Create(comment).Error }
+func (r *GormInteractionRepository) CreateComment(comment *model.Comment) error {
+	return r.db.Create(comment).Error
+}
 
 func (r *GormInteractionRepository) DeleteComment(id, userID uuid.UUID) error {
 	res := r.db.Model(&model.Comment{}).Where("id = ? AND user_id = ? AND deleted_at IS NULL", id, userID).Update("deleted_at", gorm.Expr("now()"))
-	if res.Error != nil { return res.Error }
-	if res.RowsAffected == 0 { return gorm.ErrRecordNotFound }
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
 	return nil
 }
 
 func (r *GormInteractionRepository) DeleteCommentAsPostOwner(commentID, postID uuid.UUID) error {
 	res := r.db.Model(&model.Comment{}).Where("id = ? AND post_id = ? AND deleted_at IS NULL", commentID, postID).Update("deleted_at", gorm.Expr("now()"))
-	if res.Error != nil { return res.Error }
-	if res.RowsAffected == 0 { return gorm.ErrRecordNotFound }
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
 	return nil
 }
 
@@ -96,18 +110,22 @@ func (r *GormInteractionRepository) DeleteSavedPost(userID, postID uuid.UUID) er
 func (r *GormInteractionRepository) ListPostComments(postID uuid.UUID, page, limit int) ([]model.Comment, int64, error) {
 	var total int64
 	query := r.db.Model(&model.Comment{}).Where("post_id = ? AND deleted_at IS NULL", postID)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var comments []model.Comment
-	err := query.Order("created_at ASC").Offset((page-1)*limit).Limit(limit).Find(&comments).Error
+	err := query.Order("created_at ASC").Offset((page - 1) * limit).Limit(limit).Find(&comments).Error
 	return comments, total, err
 }
 
 func (r *GormInteractionRepository) ListSavedPosts(userID uuid.UUID, page, limit int) ([]model.SavedPost, int64, error) {
 	var total int64
 	query := r.db.Model(&model.SavedPost{}).Where("user_id = ?", userID)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var saved []model.SavedPost
-	err := query.Preload("Post").Preload("Post.Media").Order("created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&saved).Error
+	err := query.Preload("Post").Preload("Post.Media").Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&saved).Error
 	return saved, total, err
 }
 
@@ -130,8 +148,12 @@ func (r *GormInteractionRepository) GetPostOwner(postID uuid.UUID) (*PostOwnerIn
 		Joins("JOIN users ON users.id = posts.user_id").
 		Where("posts.id = ? AND posts.deleted_at IS NULL", postID).
 		Scan(&result).Error
-	if err != nil { return nil, err }
-	if result.UserID == uuid.Nil { return nil, gorm.ErrRecordNotFound }
+	if err != nil {
+		return nil, err
+	}
+	if result.UserID == uuid.Nil {
+		return nil, gorm.ErrRecordNotFound
+	}
 	return &PostOwnerInfo{UserID: result.UserID, IsPrivate: result.IsPrivate}, nil
 }
 

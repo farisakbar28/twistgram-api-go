@@ -14,7 +14,7 @@ type Highlight struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// Relations
-	User   User              `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User    User             `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Stories []HighlightStory `gorm:"foreignKey:HighlightID" json:"stories,omitempty"`
 }
 

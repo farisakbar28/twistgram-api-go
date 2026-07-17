@@ -17,53 +17,100 @@ func NewStoryHandlerWithService(svc *service.StoryService) *StoryHandler {
 }
 
 func (h *StoryHandler) Create(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	var req dto.CreateStoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+	}
 	res, err := h.service.Create(userID, req)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Created(c, gin.H{"story": res})
 }
 
 func (h *StoryHandler) Delete(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	storyID, ok := parseStoryID(c); if !ok { return }
-	if h.handleError(c, h.service.Delete(userID, storyID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	storyID, ok := parseStoryID(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.Delete(userID, storyID)) {
+		return
+	}
 	response.Success(c, gin.H{"deleted": true})
 }
 
 func (h *StoryHandler) GetByID(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	storyID, ok := parseStoryID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	storyID, ok := parseStoryID(c)
+	if !ok {
+		return
+	}
 	res, err := h.service.GetByID(userID, storyID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"story": res})
 }
 
 func (h *StoryHandler) Feed(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
 	items, err := h.service.Feed(userID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"feed": items})
 }
 
 func (h *StoryHandler) RecordView(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	storyID, ok := parseStoryID(c); if !ok { return }
-	if h.handleError(c, h.service.RecordView(userID, storyID)) { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	storyID, ok := parseStoryID(c)
+	if !ok {
+		return
+	}
+	if h.handleError(c, h.service.RecordView(userID, storyID)) {
+		return
+	}
 	response.Success(c, gin.H{"viewed": true})
 }
 
 func (h *StoryHandler) Viewers(c *gin.Context) {
-	userID, ok := authUser(c); if !ok { return }
-	storyID, ok := parseStoryID(c); if !ok { return }
+	userID, ok := authUser(c)
+	if !ok {
+		return
+	}
+	storyID, ok := parseStoryID(c)
+	if !ok {
+		return
+	}
 	items, err := h.service.Viewers(userID, storyID)
-	if h.handleError(c, err) { return }
+	if h.handleError(c, err) {
+		return
+	}
 	response.Success(c, gin.H{"viewers": items})
 }
 
 func (h *StoryHandler) handleError(c *gin.Context, err error) bool {
-	if err == nil { return false }
+	if err == nil {
+		return false
+	}
 	switch {
 	case errors.Is(err, service.ErrInvalidInput):
 		response.BadRequest(c, "Invalid request data")
@@ -79,6 +126,9 @@ func (h *StoryHandler) handleError(c *gin.Context, err error) bool {
 
 func parseStoryID(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("id"))
-	if err != nil { response.BadRequest(c, "Invalid story id"); return uuid.Nil, false }
+	if err != nil {
+		response.BadRequest(c, "Invalid story id")
+		return uuid.Nil, false
+	}
 	return id, true
 }

@@ -39,8 +39,12 @@ func (r *GormDMRepository) FindConversationBetween(userA, userB uuid.UUID) (*mod
 	return &conv, err
 }
 
-func (r *GormDMRepository) CreateConversation(conversation *model.Conversation) error { return r.db.Create(conversation).Error }
-func (r *GormDMRepository) AddParticipant(participant *model.ConversationParticipant) error { return r.db.Create(participant).Error }
+func (r *GormDMRepository) CreateConversation(conversation *model.Conversation) error {
+	return r.db.Create(conversation).Error
+}
+func (r *GormDMRepository) AddParticipant(participant *model.ConversationParticipant) error {
+	return r.db.Create(participant).Error
+}
 
 func (r *GormDMRepository) ListMessageRequests(userID uuid.UUID, page, limit int) ([]model.Conversation, int64, error) {
 	// MSG-02: conversations where the OTHER user is private
@@ -57,9 +61,11 @@ func (r *GormDMRepository) ListMessageRequests(userID uuid.UUID, page, limit int
 		Joins("JOIN conversation_participants cp ON cp.conversation_id = conversations.id").
 		Where("cp.user_id = ?", userID).
 		Where("EXISTS (?)", subQuery)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var convs []model.Conversation
-	err := query.Order("conversations.created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&convs).Error
+	err := query.Order("conversations.created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&convs).Error
 	return convs, total, err
 }
 
@@ -77,15 +83,19 @@ func (r *GormDMRepository) ListConversations(userID uuid.UUID, page, limit int) 
 		Joins("JOIN conversation_participants cp ON cp.conversation_id = conversations.id").
 		Where("cp.user_id = ?", userID).
 		Where("NOT EXISTS (?)", privateRequestSubQuery)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var convs []model.Conversation
-	err := query.Order("conversations.created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&convs).Error
+	err := query.Order("conversations.created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&convs).Error
 	return convs, total, err
 }
 
 func (r *GormDMRepository) GetConversationParticipants(conversationIDs []uuid.UUID) ([]model.ConversationParticipant, error) {
 	var parts []model.ConversationParticipant
-	if len(conversationIDs) == 0 { return parts, nil }
+	if len(conversationIDs) == 0 {
+		return parts, nil
+	}
 	err := r.db.Where("conversation_id IN ?", conversationIDs).Preload("User").Find(&parts).Error
 	return parts, err
 }
@@ -93,13 +103,17 @@ func (r *GormDMRepository) GetConversationParticipants(conversationIDs []uuid.UU
 func (r *GormDMRepository) ListMessages(conversationID uuid.UUID, page, limit int) ([]model.Message, int64, error) {
 	var total int64
 	query := r.db.Model(&model.Message{}).Where("conversation_id = ?", conversationID)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var msgs []model.Message
-	err := query.Preload("Sender").Order("created_at DESC").Offset((page-1)*limit).Limit(limit).Find(&msgs).Error
+	err := query.Preload("Sender").Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Find(&msgs).Error
 	return msgs, total, err
 }
 
-func (r *GormDMRepository) CreateMessage(message *model.Message) error { return r.db.Create(message).Error }
+func (r *GormDMRepository) CreateMessage(message *model.Message) error {
+	return r.db.Create(message).Error
+}
 
 func (r *GormDMRepository) UserBlocked(userA, userB uuid.UUID) (bool, error) {
 	var count int64
@@ -121,13 +135,17 @@ func (r *GormDMRepository) ConversationHasParticipant(conversationID, userID uui
 
 func (r *GormDMRepository) FindConversationByID(id uuid.UUID) (*model.Conversation, error) {
 	var c model.Conversation
-	if err := r.db.First(&c, "id = ?", id).Error; err != nil { return nil, err }
+	if err := r.db.First(&c, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
 func (r *GormDMRepository) GetStoryOwner(storyID uuid.UUID) (uuid.UUID, error) {
 	var s model.Story
-	if err := r.db.Select("user_id").First(&s, "id = ?", storyID).Error; err != nil { return uuid.Nil, err }
+	if err := r.db.Select("user_id").First(&s, "id = ?", storyID).Error; err != nil {
+		return uuid.Nil, err
+	}
 	return s.UserID, nil
 }
 

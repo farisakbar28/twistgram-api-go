@@ -56,7 +56,9 @@ func (s *SocialService) Follow(viewerID, targetID uuid.UUID) (*dto.FollowStatusR
 		return nil, err
 	}
 	notifType := "follow"
-	if status == "pending" { notifType = "follow_request" }
+	if status == "pending" {
+		notifType = "follow_request"
+	}
 	_ = s.repo.CreateNotification(&model.Notification{RecipientID: targetID, ActorID: viewerID, Type: notifType})
 	return &dto.FollowStatusResponse{TargetID: targetID.String(), Status: status}, nil
 }
@@ -197,7 +199,9 @@ func (s *SocialService) Report(reporterID uuid.UUID, req dto.ReportRequest) (*dt
 
 func (s *SocialService) GetBlockedUsers(viewerID uuid.UUID) ([]dto.SocialUserResponse, error) {
 	blocks, err := s.repo.FindBlocksByBlocker(viewerID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	out := make([]dto.SocialUserResponse, 0, len(blocks))
 	for _, b := range blocks {
 		out = append(out, buildSocialUser(b.Blocked))

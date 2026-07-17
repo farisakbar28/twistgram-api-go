@@ -10,12 +10,12 @@ type PostMediaRequest struct {
 }
 
 type CreatePostRequest struct {
-	Caption          *string             `json:"caption"`
-	Location         *string             `json:"location"`
-	CommentsDisabled *bool               `json:"comments_disabled"`
-	Media            []PostMediaRequest  `json:"media" binding:"required,min=1,max=10"`
-	TaggedUserIDs    []string            `json:"tagged_user_ids"`
-	Hashtags         []string            `json:"hashtags"`
+	Caption          *string            `json:"caption"`
+	Location         *string            `json:"location"`
+	CommentsDisabled *bool              `json:"comments_disabled"`
+	Media            []PostMediaRequest `json:"media" binding:"required,min=1,max=10"`
+	TaggedUserIDs    []string           `json:"tagged_user_ids"`
+	Hashtags         []string           `json:"hashtags"`
 }
 
 type UpdatePostRequest struct {

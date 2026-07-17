@@ -19,11 +19,11 @@ type Post struct {
 	UpdatedAt        time.Time  `json:"updated_at"`
 
 	// Relations
-	User     User        `gorm:"foreignKey:UserID" json:"user,omitempty"`
-	Media    []PostMedia `gorm:"foreignKey:PostID" json:"media,omitempty"`
-	Tags     []PostTag   `gorm:"foreignKey:PostID" json:"tags,omitempty"`
+	User     User          `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Media    []PostMedia   `gorm:"foreignKey:PostID" json:"media,omitempty"`
+	Tags     []PostTag     `gorm:"foreignKey:PostID" json:"tags,omitempty"`
 	Hashtags []PostHashtag `gorm:"foreignKey:PostID" json:"hashtags,omitempty"`
-	Comments []Comment   `gorm:"foreignKey:PostID" json:"comments,omitempty"`
+	Comments []Comment     `gorm:"foreignKey:PostID" json:"comments,omitempty"`
 }
 
 func (Post) TableName() string {

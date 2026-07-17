@@ -15,10 +15,10 @@ type AddStoryToHighlightRequest struct {
 }
 
 type HighlightResponse struct {
-	ID        string                    `json:"id"`
-	Title     string                    `json:"title"`
-	Stories   []HighlightStoryResponse  `json:"stories,omitempty"`
-	CreatedAt time.Time                 `json:"created_at"`
+	ID        string                   `json:"id"`
+	Title     string                   `json:"title"`
+	Stories   []HighlightStoryResponse `json:"stories,omitempty"`
+	CreatedAt time.Time                `json:"created_at"`
 }
 
 type HighlightStoryResponse struct {

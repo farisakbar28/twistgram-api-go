@@ -33,7 +33,9 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 
 func (r *LocalAuthRepository) CreateUserWithOTP(user *model.User, otp *model.AuthOTP) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(user).Error; err != nil { return err }
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
 		otp.UserID = user.ID
 		return tx.Create(otp).Error
 	})

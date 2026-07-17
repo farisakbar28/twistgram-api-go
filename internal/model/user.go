@@ -21,6 +21,7 @@ type User struct {
 	AvatarURL      *string    `gorm:"type:varchar(500);null" json:"avatar_url,omitempty"`
 	ExternalLink   *string    `gorm:"type:varchar(500);null" json:"external_link,omitempty"`
 	IsPrivate      bool       `gorm:"default:false" json:"is_private"`
+	TokenVersion   int        `gorm:"default:1" json:"-"` // AUTH-05: increment on password change to invalidate old tokens
 	LastUsernameAt *time.Time `gorm:"null" json:"last_username_at,omitempty"` // SOC-05: 1x change per month
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`

@@ -13,8 +13,8 @@ type PostTag struct {
 	PositionY    *float64  `gorm:"null" json:"position_y,omitempty"` // [ADV] koordinat tag
 
 	// Relations
-	Post        Post `gorm:"foreignKey:PostID" json:"post,omitempty"`
-	TaggedUser  User `gorm:"foreignKey:TaggedUserID" json:"tagged_user,omitempty"`
+	Post       Post `gorm:"foreignKey:PostID" json:"post,omitempty"`
+	TaggedUser User `gorm:"foreignKey:TaggedUserID" json:"tagged_user,omitempty"`
 }
 
 func (PostTag) TableName() string {

@@ -14,6 +14,7 @@ type UserRepository interface {
 	UsernameExists(username string, excludeID uuid.UUID) (bool, error)
 	Update(user *model.User) error
 	DeleteUser(id uuid.UUID) error
+	IncrementTokenVersion(id uuid.UUID) error
 	CountFollowers(userID uuid.UUID) (int64, error)
 	CountFollowing(userID uuid.UUID) (int64, error)
 	CountPosts(userID uuid.UUID) (int64, error)
@@ -78,6 +79,10 @@ func (r *GormUserRepository) DeleteUser(id uuid.UUID) error {
 	})
 }
 
+func (r *GormUserRepository) IncrementTokenVersion(id uuid.UUID) error {
+	return r.db.Model(&model.User{}).Where("id = ?", id).Update("token_version", gorm.Expr("token_version + 1")).Error
+}
+
 func (r *GormUserRepository) CountFollowers(userID uuid.UUID) (int64, error) {
 	var count int64
 	err := r.db.Model(&model.Follow{}).
@@ -108,14 +113,20 @@ func (r *GormUserRepository) GetInterests(userID uuid.UUID) ([]string, error) {
 		return nil, err
 	}
 	out := make([]string, 0, len(interests))
-	for _, i := range interests { out = append(out, i.InterestCategory) }
+	for _, i := range interests {
+		out = append(out, i.InterestCategory)
+	}
 	return out, nil
 }
 
 func (r *GormUserRepository) SetInterests(userID uuid.UUID, interests []string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("user_id = ?", userID).Delete(&model.UserInterest{}).Error; err != nil { return err }
-		if len(interests) == 0 { return nil }
+		if err := tx.Where("user_id = ?", userID).Delete(&model.UserInterest{}).Error; err != nil {
+			return err
+		}
+		if len(interests) == 0 {
+			return nil
+		}
 		items := make([]model.UserInterest, 0, len(interests))
 		for _, cat := range interests {
 			items = append(items, model.UserInterest{UserID: userID, InterestCategory: cat})

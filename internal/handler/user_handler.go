@@ -54,10 +54,16 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 // Endpoint: PATCH /api/v1/users/me/privacy (PROTECTED)
 func (h *UserHandler) GetInterests(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	res, err := h.userService.GetInterests(userID)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) { response.NotFound(c, "User not found") } else { response.InternalError(c, "Failed to fetch interests") }
+		if errors.Is(err, service.ErrUserNotFound) {
+			response.NotFound(c, "User not found")
+		} else {
+			response.InternalError(c, "Failed to fetch interests")
+		}
 		return
 	}
 	response.Success(c, res)
@@ -65,12 +71,21 @@ func (h *UserHandler) GetInterests(c *gin.Context) {
 
 func (h *UserHandler) SetInterests(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	var req dto.UserInterestsRequest
-	if err := c.ShouldBindJSON(&req); err != nil { response.BadRequest(c, "Invalid request body"); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request body")
+		return
+	}
 	res, err := h.userService.SetInterests(userID, req)
 	if err != nil {
-		if errors.Is(err, service.ErrUserNotFound) { response.NotFound(c, "User not found") } else { response.InternalError(c, "Failed to update interests") }
+		if errors.Is(err, service.ErrUserNotFound) {
+			response.NotFound(c, "User not found")
+		} else {
+			response.InternalError(c, "Failed to update interests")
+		}
 		return
 	}
 	response.Success(c, res)

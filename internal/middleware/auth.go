@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	contextUserIDKey    = "user_id"
-	contextUserEmailKey = "user_email"
+	contextUserIDKey        = "user_id"
+	contextUserEmailKey     = "user_email"
+	contextEmailVerifiedKey = "email_verified"
+	contextTokenVersionKey  = "token_version"
 )
 
 // AuthRequired adalah middleware Gin yang memvalidasi JWT dari header
@@ -83,6 +85,21 @@ func AuthRequired() gin.HandlerFunc {
 			c.Set(contextUserEmailKey, strings.TrimSpace(email))
 		}
 
+		// Store email_verified from JWT claims for gating features
+		if emailVerified, ok := claims["email_verified"].(bool); ok {
+			c.Set(contextEmailVerifiedKey, emailVerified)
+		}
+
+		// Store token_version for AUTH-05 validation
+		if tv, ok := claims["token_version"]; ok {
+			switch v := tv.(type) {
+			case float64:
+				c.Set(contextTokenVersionKey, int(v))
+			case int:
+				c.Set(contextTokenVersionKey, v)
+			}
+		}
+
 		c.Next()
 	}
 }
@@ -124,4 +141,49 @@ func GetUserEmail(c *gin.Context) string {
 	}
 
 	return emailStr
+}
+
+// EmailVerifiedRequired adalah middleware yang memastikan user sudah verifikasi email.
+// Digunakan untuk endpoint yang memerlukan email verified (posting, follow, story).
+func EmailVerifiedRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := GetUserID(c)
+		if userID == "" {
+			response.Unauthorized(c, "User not authenticated")
+			c.Abort()
+			return
+		}
+
+		verified, exists := c.Get(contextEmailVerifiedKey)
+		if !exists {
+			response.Forbidden(c, "Email verification required")
+			c.Abort()
+			return
+		}
+
+		isVerified, ok := verified.(bool)
+		if !ok || !isVerified {
+			response.Forbidden(c, "Email verification required")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+// GetTokenVersion mengambil token version dari context JWT.
+func GetTokenVersion(c *gin.Context) int {
+	if c == nil {
+		return 0
+	}
+	tv, exists := c.Get(contextTokenVersionKey)
+	if !exists {
+		return 0
+	}
+	v, ok := tv.(int)
+	if !ok {
+		return 0
+	}
+	return v
 }

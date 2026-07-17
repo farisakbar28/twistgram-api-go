@@ -15,7 +15,9 @@ type NotificationRepository interface {
 
 type GormNotificationRepository struct{ db *gorm.DB }
 
-func NewNotificationRepository(db *gorm.DB) NotificationRepository { return &GormNotificationRepository{db: db} }
+func NewNotificationRepository(db *gorm.DB) NotificationRepository {
+	return &GormNotificationRepository{db: db}
+}
 
 func (r *GormNotificationRepository) ListByRecipient(recipientID uuid.UUID, page, limit int) ([]model.Notification, int64, error) {
 	var total int64
@@ -26,16 +28,22 @@ func (r *GormNotificationRepository) ListByRecipient(recipientID uuid.UUID, page
 		SELECT blocked_id FROM blocks WHERE blocker_id = ?
 	)`
 	query := r.db.Model(&model.Notification{}).Where("recipient_id = ? AND "+blockedFilter, recipientID, recipientID, recipientID)
-	if err := query.Count(&total).Error; err != nil { return nil, 0, err }
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 	var notifs []model.Notification
-	err := query.Order("created_at DESC").Offset((page-1)*limit).Limit(limit).Preload("Actor").Find(&notifs).Error
+	err := query.Order("created_at DESC").Offset((page - 1) * limit).Limit(limit).Preload("Actor").Find(&notifs).Error
 	return notifs, total, err
 }
 
 func (r *GormNotificationRepository) MarkRead(notificationID, recipientID uuid.UUID) error {
 	res := r.db.Model(&model.Notification{}).Where("id = ? AND recipient_id = ?", notificationID, recipientID).Update("is_read", true)
-	if res.Error != nil { return res.Error }
-	if res.RowsAffected == 0 { return gorm.ErrRecordNotFound }
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
 	return nil
 }
 

@@ -30,10 +30,16 @@ func NewStoryRepository(db *gorm.DB) StoryRepository { return &GormStoryReposito
 
 func (r *GormStoryRepository) CreateStoryWithTags(story *model.Story, tags []model.StoryTag) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(story).Error; err != nil { return err }
+		if err := tx.Create(story).Error; err != nil {
+			return err
+		}
 		if len(tags) > 0 {
-			for i := range tags { tags[i].StoryID = story.ID }
-			if err := tx.Create(&tags).Error; err != nil { return err }
+			for i := range tags {
+				tags[i].StoryID = story.ID
+			}
+			if err := tx.Create(&tags).Error; err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -41,7 +47,9 @@ func (r *GormStoryRepository) CreateStoryWithTags(story *model.Story, tags []mod
 
 func (r *GormStoryRepository) GetStoryByID(id uuid.UUID) (*model.Story, error) {
 	var s model.Story
-	if err := r.db.First(&s, "id = ? AND expires_at > ?", id, time.Now()).Error; err != nil { return nil, err }
+	if err := r.db.First(&s, "id = ? AND expires_at > ?", id, time.Now()).Error; err != nil {
+		return nil, err
+	}
 	return &s, nil
 }
 
@@ -60,13 +68,23 @@ func (r *GormStoryRepository) DeleteStory(id uuid.UUID, userID uuid.UUID) error 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Validasi ownership
 		var count int64
-		if err := tx.Model(&model.Story{}).Where("id = ? AND user_id = ?", id, userID).Count(&count).Error; err != nil { return err }
-		if count == 0 { return gorm.ErrRecordNotFound }
+		if err := tx.Model(&model.Story{}).Where("id = ? AND user_id = ?", id, userID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			return gorm.ErrRecordNotFound
+		}
 
 		// Manual cascade
-		if err := tx.Where("story_id = ?", id).Delete(&model.StoryView{}).Error; err != nil { return err }
-		if err := tx.Where("story_id = ?", id).Delete(&model.StoryTag{}).Error; err != nil { return err }
-		if err := tx.Model(&model.Message{}).Where("reply_to_story_id = ?", id).Update("reply_to_story_id", nil).Error; err != nil { return err }
+		if err := tx.Where("story_id = ?", id).Delete(&model.StoryView{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("story_id = ?", id).Delete(&model.StoryTag{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.Message{}).Where("reply_to_story_id = ?", id).Update("reply_to_story_id", nil).Error; err != nil {
+			return err
+		}
 
 		// Delete story
 		return tx.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Story{}).Error
@@ -113,7 +131,9 @@ func (r *GormStoryRepository) IsAcceptedFollower(followerID, followingID uuid.UU
 
 func (r *GormStoryRepository) GetStoryOwner(storyID uuid.UUID) (uuid.UUID, error) {
 	var s model.Story
-	if err := r.db.Select("user_id").First(&s, "id = ?", storyID).Error; err != nil { return uuid.Nil, err }
+	if err := r.db.Select("user_id").First(&s, "id = ?", storyID).Error; err != nil {
+		return uuid.Nil, err
+	}
 	return s.UserID, nil
 }
 

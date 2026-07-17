@@ -38,11 +38,11 @@ const (
 
 // Report reasons
 const (
-	ReasonSpam         = "spam"
+	ReasonSpam          = "spam"
 	ReasonInappropriate = "inappropriate"
-	ReasonHarassment   = "harassment"
-	ReasonFakeAccount  = "fake_account"
-	ReasonOther        = "other"
+	ReasonHarassment    = "harassment"
+	ReasonFakeAccount   = "fake_account"
+	ReasonOther         = "other"
 )
 
 // Report status
@@ -78,16 +78,16 @@ const (
 
 // Pagination defaults
 const (
-	DefaultPage  = 1
-	DefaultLimit = 20
-	MaxLimit     = 100
+	DefaultPage    = 1
+	DefaultLimit   = 20
+	MaxLimit       = 100
 	MaxSearchLimit = 50
 )
 
 // Rate limits
 const (
-	RateLimitPublic  = 5
-	RateBurstPublic  = 10
+	RateLimitPublic    = 5
+	RateBurstPublic    = 10
 	RateLimitProtected = 30
 	RateBurstProtected = 60
 )
