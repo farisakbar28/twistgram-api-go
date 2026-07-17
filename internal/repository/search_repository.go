@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"strings"
 
 	"github.com/google/uuid"
@@ -9,18 +10,18 @@ import (
 )
 
 type SearchRepository interface {
-	SearchUsers(viewerID, query string, limit int) ([]model.User, error)
-	SearchHashtags(viewerID, query string, limit int) ([]model.Hashtag, error)
-	ListPostsByHashtag(tag string, viewerID uuid.UUID, page, limit int) ([]model.Post, int64, error)
+	SearchUsers(ctx context.Context, viewerID, query string, limit int) ([]model.User, error)
+	SearchHashtags(ctx context.Context, viewerID, query string, limit int) ([]model.Hashtag, error)
+	ListPostsByHashtag(ctx context.Context, tag string, viewerID uuid.UUID, page, limit int) ([]model.Post, int64, error)
 }
 
 type GormSearchRepository struct{ db *gorm.DB }
 
 func NewSearchRepository(db *gorm.DB) SearchRepository { return &GormSearchRepository{db: db} }
 
-func (r *GormSearchRepository) SearchUsers(viewerID, query string, limit int) ([]model.User, error) {
+func (r *GormSearchRepository) SearchUsers(ctx context.Context, viewerID, query string, limit int) ([]model.User, error) {
 	q := strings.TrimSpace(query)
-	db := r.db.Where("(LOWER(username) LIKE ? OR LOWER(name) LIKE ?)", "%"+strings.ToLower(q)+"%", "%"+strings.ToLower(q)+"%")
+	db := r.db.WithContext(ctx).Where("(LOWER(username) LIKE ? OR LOWER(name) LIKE ?)", "%"+strings.ToLower(q)+"%", "%"+strings.ToLower(q)+"%")
 	if viewerID != "" {
 		db = db.Where("id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?) AND id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)", viewerID, viewerID)
 	}
@@ -29,11 +30,10 @@ func (r *GormSearchRepository) SearchUsers(viewerID, query string, limit int) ([
 	return users, err
 }
 
-func (r *GormSearchRepository) SearchHashtags(viewerID, query string, limit int) ([]model.Hashtag, error) {
+func (r *GormSearchRepository) SearchHashtags(ctx context.Context, viewerID, query string, limit int) ([]model.Hashtag, error) {
 	q := strings.TrimSpace(strings.TrimPrefix(query, "#"))
 	var hashtags []model.Hashtag
-	// Only count posts whose owner is public OR viewer is an accepted follower
-	db := r.db.Table("hashtags").
+	db := r.db.WithContext(ctx).Table("hashtags").
 		Select("hashtags.id, hashtags.tag, hashtags.created_at, COUNT(ph.post_id) AS post_count").
 		Joins("LEFT JOIN post_hashtags ph ON ph.hashtag_id = hashtags.id").
 		Joins("LEFT JOIN posts p ON p.id = ph.post_id AND p.deleted_at IS NULL").
@@ -54,11 +54,11 @@ func (r *GormSearchRepository) SearchHashtags(viewerID, query string, limit int)
 	return hashtags, err
 }
 
-func (r *GormSearchRepository) ListPostsByHashtag(tag string, viewerID uuid.UUID, page, limit int) ([]model.Post, int64, error) {
+func (r *GormSearchRepository) ListPostsByHashtag(ctx context.Context, tag string, viewerID uuid.UUID, page, limit int) ([]model.Post, int64, error) {
 	q := strings.TrimSpace(strings.TrimPrefix(tag, "#"))
 	var total int64
 
-	query := r.db.Model(&model.Post{}).
+	query := r.db.WithContext(ctx).Model(&model.Post{}).
 		Joins("JOIN post_hashtags ph ON ph.post_id = posts.id").
 		Joins("JOIN hashtags h ON h.id = ph.hashtag_id AND LOWER(h.tag) = ?", strings.ToLower(q)).
 		Joins("JOIN users u ON u.id = posts.user_id").

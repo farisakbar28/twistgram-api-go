@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ type StoryService struct{ repo repository.StoryRepository }
 
 func NewStoryService(repo repository.StoryRepository) *StoryService { return &StoryService{repo: repo} }
 
-func (s *StoryService) Create(userID uuid.UUID, req dto.CreateStoryRequest) (*dto.StoryResponse, error) {
+func (s *StoryService) Create(ctx context.Context, userID uuid.UUID, req dto.CreateStoryRequest) (*dto.StoryResponse, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
@@ -50,13 +51,12 @@ func (s *StoryService) Create(userID uuid.UUID, req dto.CreateStoryRequest) (*dt
 		}
 		tags = append(tags, model.StoryTag{TaggedUserID: parsed})
 	}
-	if err := s.repo.CreateStoryWithTags(story, tags); err != nil {
+	if err := s.repo.CreateStoryWithTags(ctx, story, tags); err != nil {
 		return nil, err
 	}
 
-	// CNT-05: Send notification to tagged users
 	for _, tag := range tags {
-		_ = s.repo.CreateNotification(&model.Notification{
+		_ = s.repo.CreateNotification(ctx, &model.Notification{
 			RecipientID: tag.TaggedUserID,
 			ActorID:     userID,
 			Type:        "mention",
@@ -67,8 +67,8 @@ func (s *StoryService) Create(userID uuid.UUID, req dto.CreateStoryRequest) (*dt
 	return buildStoryResponse(story), nil
 }
 
-func (s *StoryService) GetByID(viewerID, storyID uuid.UUID) (*dto.StoryResponse, error) {
-	story, err := s.repo.GetStoryByID(storyID)
+func (s *StoryService) GetByID(ctx context.Context, viewerID, storyID uuid.UUID) (*dto.StoryResponse, error) {
+	story, err := s.repo.GetStoryByID(ctx, storyID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrStoryNotFound
 	}
@@ -76,14 +76,14 @@ func (s *StoryService) GetByID(viewerID, storyID uuid.UUID) (*dto.StoryResponse,
 		return nil, err
 	}
 	if viewerID != story.UserID {
-		blocked, err := s.repo.IsBlockedEitherDirection(viewerID, story.UserID)
+		blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, story.UserID)
 		if err != nil {
 			return nil, err
 		}
 		if blocked {
 			return nil, ErrForbidden
 		}
-		following, err := s.repo.IsAcceptedFollower(viewerID, story.UserID)
+		following, err := s.repo.IsAcceptedFollower(ctx, viewerID, story.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -94,11 +94,11 @@ func (s *StoryService) GetByID(viewerID, storyID uuid.UUID) (*dto.StoryResponse,
 	return buildStoryResponse(story), nil
 }
 
-func (s *StoryService) Delete(userID, storyID uuid.UUID) error {
+func (s *StoryService) Delete(ctx context.Context, userID, storyID uuid.UUID) error {
 	if userID == uuid.Nil || storyID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	ownerID, err := s.repo.GetStoryOwner(storyID)
+	ownerID, err := s.repo.GetStoryOwner(ctx, storyID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrStoryNotFound
 	}
@@ -109,14 +109,14 @@ func (s *StoryService) Delete(userID, storyID uuid.UUID) error {
 		return ErrForbidden
 	}
 
-	if err := s.repo.DeleteStory(storyID, userID); err != nil {
+	if err := s.repo.DeleteStory(ctx, storyID, userID); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *StoryService) Feed(userID uuid.UUID) ([]dto.StoryFeedItem, error) {
-	stories, err := s.repo.ListActiveFeedStories(userID)
+func (s *StoryService) Feed(ctx context.Context, userID uuid.UUID) ([]dto.StoryFeedItem, error) {
+	stories, err := s.repo.ListActiveFeedStories(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,24 +129,23 @@ func (s *StoryService) Feed(userID uuid.UUID) ([]dto.StoryFeedItem, error) {
 		}
 		grouped[story.UserID].Stories = append(grouped[story.UserID].Stories, *buildStoryResponse(&story))
 	}
-	// Stories from repo are DESC, reverse per bucket to get ASC chronological within each user
 	out := make([]dto.StoryFeedItem, 0, len(order))
 	for _, uid := range order {
 		item := grouped[uid]
-		s := item.Stories
-		for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-			s[i], s[j] = s[j], s[i]
+		st := item.Stories
+		for i, j := 0, len(st)-1; i < j; i, j = i+1, j-1 {
+			st[i], st[j] = st[j], st[i]
 		}
 		out = append(out, *item)
 	}
 	return out, nil
 }
 
-func (s *StoryService) RecordView(viewerID, storyID uuid.UUID) error {
+func (s *StoryService) RecordView(ctx context.Context, viewerID, storyID uuid.UUID) error {
 	if viewerID == uuid.Nil || storyID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	story, err := s.repo.GetStoryByID(storyID)
+	story, err := s.repo.GetStoryByID(ctx, storyID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrStoryNotFound
 	}
@@ -156,18 +155,18 @@ func (s *StoryService) RecordView(viewerID, storyID uuid.UUID) error {
 	if viewerID == story.UserID {
 		return nil
 	}
-	blocked, err := s.repo.IsBlockedEitherDirection(viewerID, story.UserID)
+	blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, story.UserID)
 	if err != nil {
 		return err
 	}
 	if blocked {
 		return ErrForbidden
 	}
-	return s.repo.RecordView(&model.StoryView{StoryID: storyID, ViewerID: viewerID, ViewedAt: time.Now()})
+	return s.repo.RecordView(ctx, &model.StoryView{StoryID: storyID, ViewerID: viewerID, ViewedAt: time.Now()})
 }
 
-func (s *StoryService) Viewers(userID, storyID uuid.UUID) ([]dto.StoryViewerResponse, error) {
-	ownerID, err := s.repo.GetStoryOwner(storyID)
+func (s *StoryService) Viewers(ctx context.Context, userID, storyID uuid.UUID) ([]dto.StoryViewerResponse, error) {
+	ownerID, err := s.repo.GetStoryOwner(ctx, storyID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrStoryNotFound
 	}
@@ -177,7 +176,7 @@ func (s *StoryService) Viewers(userID, storyID uuid.UUID) ([]dto.StoryViewerResp
 	if ownerID != userID {
 		return nil, ErrForbidden
 	}
-	views, err := s.repo.ListViewers(storyID)
+	views, err := s.repo.ListViewers(ctx, storyID)
 	if err != nil {
 		return nil, err
 	}

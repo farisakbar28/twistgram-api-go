@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"regexp"
@@ -39,8 +40,8 @@ func NewUserServiceWithClock(repo repository.UserRepository, now func() time.Tim
 	return &UserService{repo: repo, now: now}
 }
 
-func (s *UserService) GetMe(userID uuid.UUID) (*dto.UserProfileResponse, error) {
-	user, err := s.repo.FindByID(userID)
+func (s *UserService) GetMe(ctx context.Context, userID uuid.UUID) (*dto.UserProfileResponse, error) {
+	user, err := s.repo.FindByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
@@ -48,7 +49,7 @@ func (s *UserService) GetMe(userID uuid.UUID) (*dto.UserProfileResponse, error) 
 		return nil, err
 	}
 
-	counts, err := s.counts(user.ID)
+	counts, err := s.counts(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,12 +58,12 @@ func (s *UserService) GetMe(userID uuid.UUID) (*dto.UserProfileResponse, error) 
 	return &profile, nil
 }
 
-func (s *UserService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileRequest) (*dto.UserProfileResponse, error) {
+func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, req dto.UpdateProfileRequest) (*dto.UserProfileResponse, error) {
 	if err := ValidateUpdateProfileRequest(req); err != nil {
 		return nil, err
 	}
 
-	user, err := s.repo.FindByID(userID)
+	user, err := s.repo.FindByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
@@ -88,7 +89,7 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 			if user.LastUsernameAt != nil && s.now().Before(user.LastUsernameAt.AddDate(0, 1, 0)) {
 				return nil, ErrUsernameChangeLimited
 			}
-			exists, err := s.repo.UsernameExists(newUsername, user.ID)
+			exists, err := s.repo.UsernameExists(ctx, newUsername, user.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -101,11 +102,11 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 		}
 	}
 
-	if err := s.repo.Update(user); err != nil {
+	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err
 	}
 
-	counts, err := s.counts(user.ID)
+	counts, err := s.counts(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,25 +114,25 @@ func (s *UserService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 	return &profile, nil
 }
 
-func (s *UserService) GetInterests(userID uuid.UUID) (*dto.UserInterestsResponse, error) {
+func (s *UserService) GetInterests(ctx context.Context, userID uuid.UUID) (*dto.UserInterestsResponse, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
-	if err := s.ensureUserExists(userID); err != nil {
+	if err := s.ensureUserExists(ctx, userID); err != nil {
 		return nil, err
 	}
-	interests, err := s.repo.GetInterests(userID)
+	interests, err := s.repo.GetInterests(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	return &dto.UserInterestsResponse{Interests: interests}, nil
 }
 
-func (s *UserService) SetInterests(userID uuid.UUID, req dto.UserInterestsRequest) (*dto.UserInterestsResponse, error) {
+func (s *UserService) SetInterests(ctx context.Context, userID uuid.UUID, req dto.UserInterestsRequest) (*dto.UserInterestsResponse, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
-	if err := s.ensureUserExists(userID); err != nil {
+	if err := s.ensureUserExists(ctx, userID); err != nil {
 		return nil, err
 	}
 	clean := make([]string, 0, len(req.Interests))
@@ -143,25 +144,25 @@ func (s *UserService) SetInterests(userID uuid.UUID, req dto.UserInterestsReques
 			seen[c] = true
 		}
 	}
-	if err := s.repo.SetInterests(userID, clean); err != nil {
+	if err := s.repo.SetInterests(ctx, userID, clean); err != nil {
 		return nil, err
 	}
 	return &dto.UserInterestsResponse{Interests: clean}, nil
 }
 
-func (s *UserService) ensureUserExists(userID uuid.UUID) error {
-	_, err := s.repo.FindByID(userID)
+func (s *UserService) ensureUserExists(ctx context.Context, userID uuid.UUID) error {
+	_, err := s.repo.FindByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrUserNotFound
 	}
 	return err
 }
 
-func (s *UserService) DeleteAccount(userID uuid.UUID, password string) error {
+func (s *UserService) DeleteAccount(ctx context.Context, userID uuid.UUID, password string) error {
 	if userID == uuid.Nil || password == "" {
 		return ErrInvalidInput
 	}
-	user, err := s.repo.FindByID(userID)
+	user, err := s.repo.FindByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrUserNotFound
 	}
@@ -171,15 +172,15 @@ func (s *UserService) DeleteAccount(userID uuid.UUID, password string) error {
 	if user.PasswordHash == nil || !auth.CheckPasswordHash(password, *user.PasswordHash) {
 		return ErrWrongPassword
 	}
-	return s.repo.DeleteUser(userID)
+	return s.repo.DeleteUser(ctx, userID)
 }
 
-func (s *UserService) UpdatePrivacy(userID uuid.UUID, req dto.UpdatePrivacyRequest) (*dto.UserProfileResponse, error) {
+func (s *UserService) UpdatePrivacy(ctx context.Context, userID uuid.UUID, req dto.UpdatePrivacyRequest) (*dto.UserProfileResponse, error) {
 	if req.IsPrivate == nil {
 		return nil, ErrInvalidInput
 	}
 
-	user, err := s.repo.FindByID(userID)
+	user, err := s.repo.FindByID(ctx, userID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
@@ -188,11 +189,11 @@ func (s *UserService) UpdatePrivacy(userID uuid.UUID, req dto.UpdatePrivacyReque
 	}
 
 	user.IsPrivate = *req.IsPrivate
-	if err := s.repo.Update(user); err != nil {
+	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err
 	}
 
-	counts, err := s.counts(user.ID)
+	counts, err := s.counts(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -200,13 +201,13 @@ func (s *UserService) UpdatePrivacy(userID uuid.UUID, req dto.UpdatePrivacyReque
 	return &profile, nil
 }
 
-func (s *UserService) GetProfileByUsername(username string, viewerID uuid.UUID) (*dto.UserProfileResponse, error) {
+func (s *UserService) GetProfileByUsername(ctx context.Context, username string, viewerID uuid.UUID) (*dto.UserProfileResponse, error) {
 	username = strings.TrimSpace(strings.ToLower(username))
 	if !usernamePattern.MatchString(username) {
 		return nil, ErrInvalidInput
 	}
 
-	user, err := s.repo.FindByUsername(username)
+	user, err := s.repo.FindByUsername(ctx, username)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
@@ -217,21 +218,21 @@ func (s *UserService) GetProfileByUsername(username string, viewerID uuid.UUID) 
 	isSelf := viewerID != uuid.Nil && viewerID == user.ID
 	isFollowing := false
 	if viewerID != uuid.Nil && !isSelf {
-		blocked, err := s.repo.IsBlockedEitherDirection(viewerID, user.ID)
+		blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, user.ID)
 		if err != nil {
 			return nil, err
 		}
 		if blocked {
 			return nil, ErrUserBlocked
 		}
-		isFollowing, err = s.repo.IsAcceptedFollower(viewerID, user.ID)
+		isFollowing, err = s.repo.IsAcceptedFollower(ctx, viewerID, user.ID)
 		if err != nil {
 			return nil, err
 		}
 	}
 	limited := user.IsPrivate && !isSelf && !isFollowing
 
-	counts, err := s.counts(user.ID)
+	counts, err := s.counts(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -276,16 +277,16 @@ type profileCounts struct {
 	posts     int64
 }
 
-func (s *UserService) counts(userID uuid.UUID) (profileCounts, error) {
-	followers, err := s.repo.CountFollowers(userID)
+func (s *UserService) counts(ctx context.Context, userID uuid.UUID) (profileCounts, error) {
+	followers, err := s.repo.CountFollowers(ctx, userID)
 	if err != nil {
 		return profileCounts{}, err
 	}
-	following, err := s.repo.CountFollowing(userID)
+	following, err := s.repo.CountFollowing(ctx, userID)
 	if err != nil {
 		return profileCounts{}, err
 	}
-	posts, err := s.repo.CountPosts(userID)
+	posts, err := s.repo.CountPosts(ctx, userID)
 	if err != nil {
 		return profileCounts{}, err
 	}

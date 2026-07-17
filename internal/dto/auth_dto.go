@@ -14,9 +14,15 @@ type LoginRequest struct {
 }
 
 type VerifyOTPRequest struct {
-	Email string `json:"email" binding:"required,email"`
-	Token string `json:"token" binding:"required"`
-	Type  string `json:"type" binding:"required"`
+	// Primary field names (backend convention)
+	Email string `json:"email"`
+	Token string `json:"token"`
+	Type  string `json:"type"`
+
+	// Alternate field names (frontend sends these)
+	Otp      string `json:"otp"`
+	Purpose  string `json:"purpose"`
+	Identity string `json:"identifier"`
 }
 
 type ResendOTPRequest struct {
@@ -62,8 +68,9 @@ type AuthSessionResponse struct {
 }
 
 type AuthUserResponse struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+    ID            string `json:"id"`
+    Email         string `json:"email"`
+    EmailVerified bool   `json:"email_verified"`
 }
 
 type AuthResponse struct {

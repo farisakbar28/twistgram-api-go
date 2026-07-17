@@ -11,7 +11,6 @@ import (
 	"twistgram-api-go/pkg/response"
 )
 
-// UserHandler menangani request terkait user/profile.
 type UserHandler struct {
 	userService *service.UserService
 }
@@ -20,20 +19,16 @@ func NewUserHandlerWithService(userService *service.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
-// GetMe mengembalikan profil user yang sedang login (berdasarkan token JWT).
-// Endpoint: GET /api/v1/users/me (PROTECTED)
 func (h *UserHandler) GetMe(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
 	if !ok {
 		return
 	}
 
-	profile, err := h.userService.GetMe(userID)
+	profile, err := h.userService.GetMe(c.Request.Context(), userID)
 	h.handleServiceResult(c, profile, err)
 }
 
-// UpdateMe mengubah profil user yang sedang login.
-// Endpoint: PATCH /api/v1/users/me (PROTECTED)
 func (h *UserHandler) UpdateMe(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
 	if !ok {
@@ -46,18 +41,16 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	profile, err := h.userService.UpdateProfile(userID, req)
+	profile, err := h.userService.UpdateProfile(c.Request.Context(), userID, req)
 	h.handleServiceResult(c, profile, err)
 }
 
-// UpdatePrivacy mengubah status privasi user yang sedang login.
-// Endpoint: PATCH /api/v1/users/me/privacy (PROTECTED)
 func (h *UserHandler) GetInterests(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
 	if !ok {
 		return
 	}
-	res, err := h.userService.GetInterests(userID)
+	res, err := h.userService.GetInterests(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			response.NotFound(c, "User not found")
@@ -79,7 +72,7 @@ func (h *UserHandler) SetInterests(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.userService.SetInterests(userID, req)
+	res, err := h.userService.SetInterests(c.Request.Context(), userID, req)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			response.NotFound(c, "User not found")
@@ -103,12 +96,10 @@ func (h *UserHandler) UpdatePrivacy(c *gin.Context) {
 		return
 	}
 
-	profile, err := h.userService.UpdatePrivacy(userID, req)
+	profile, err := h.userService.UpdatePrivacy(c.Request.Context(), userID, req)
 	h.handleServiceResult(c, profile, err)
 }
 
-// DeleteAccount menghapus akun pengguna.
-// Endpoint: DELETE /api/v1/users/me (PROTECTED)
 func (h *UserHandler) DeleteAccount(c *gin.Context) {
 	userID, ok := getAuthenticatedUserID(c)
 	if !ok {
@@ -121,7 +112,7 @@ func (h *UserHandler) DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.DeleteAccount(userID, req.Password); err != nil {
+	if err := h.userService.DeleteAccount(c.Request.Context(), userID, req.Password); err != nil {
 		switch {
 		case errors.Is(err, service.ErrUserNotFound):
 			response.NotFound(c, "User not found")
@@ -136,15 +127,13 @@ func (h *UserHandler) DeleteAccount(c *gin.Context) {
 	response.Success(c, gin.H{"deleted": true})
 }
 
-// GetByUsername mengembalikan profil user berdasarkan username.
-// Endpoint: GET /api/v1/users/:username (PROTECTED)
 func (h *UserHandler) GetByUsername(c *gin.Context) {
 	viewerID, ok := getAuthenticatedUserID(c)
 	if !ok {
 		return
 	}
 
-	profile, err := h.userService.GetProfileByUsername(c.Param("identifier"), viewerID)
+	profile, err := h.userService.GetProfileByUsername(c.Request.Context(), c.Param("identifier"), viewerID)
 	h.handleServiceResult(c, profile, err)
 }
 

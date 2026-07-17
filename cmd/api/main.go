@@ -162,7 +162,7 @@ func main() {
 
 	// Protected routes (auth required)
 	auth := v1.Group("")
-	auth.Use(middleware.AuthRequired())
+	auth.Use(middleware.AuthRequired(db))
 	{
 		// Users & Profile (readable by unverified)
 		auth.GET("/users/me", userHandler.GetMe)
@@ -199,7 +199,7 @@ func main() {
 
 		// AUTH-02: Write operations require email verification
 		verified := v1.Group("")
-		verified.Use(middleware.AuthRequired(), middleware.EmailVerifiedRequired())
+		verified.Use(middleware.AuthRequired(db), middleware.EmailVerifiedRequired())
 		{
 			// Follow & Social
 			verified.POST("/users/:identifier/follow", socialHandler.Follow)
@@ -270,3 +270,4 @@ func main() {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
+

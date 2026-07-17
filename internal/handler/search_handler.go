@@ -19,7 +19,7 @@ func (h *SearchHandler) Search(c *gin.Context) {
 	viewerID := middleware.GetUserID(c)
 	query := c.Query("q")
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	res, err := h.service.Search(viewerID, query, limit)
+	res, err := h.service.Search(c.Request.Context(), viewerID, query, limit)
 	if err != nil {
 		response.InternalError(c, "Failed to search")
 		return
@@ -36,7 +36,7 @@ func (h *SearchHandler) HashtagPosts(c *gin.Context) {
 	viewerID := middleware.GetUserID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	posts, total, err := h.service.GetHashtagPosts(tag, viewerID, page, limit)
+	posts, total, err := h.service.GetHashtagPosts(c.Request.Context(), tag, viewerID, page, limit)
 	if err != nil {
 		response.InternalError(c, "Failed to load hashtag posts")
 		return

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ func NewSearchService(repo repository.SearchRepository) *SearchService {
 	return &SearchService{repo: repo}
 }
 
-func (s *SearchService) Search(viewerID, query string, limit int) (*dto.SearchResponse, error) {
+func (s *SearchService) Search(ctx context.Context, viewerID, query string, limit int) (*dto.SearchResponse, error) {
 	q := strings.TrimSpace(query)
 	if q == "" {
 		return &dto.SearchResponse{Users: []dto.SearchUserItem{}, Hashtags: []dto.SearchHashtagItem{}}, nil
@@ -26,18 +27,18 @@ func (s *SearchService) Search(viewerID, query string, limit int) (*dto.SearchRe
 	if limit > 50 {
 		limit = 50
 	}
-	users, err := s.repo.SearchUsers(viewerID, q, limit)
+	users, err := s.repo.SearchUsers(ctx, viewerID, q, limit)
 	if err != nil {
 		return nil, err
 	}
-	hashtags, err := s.repo.SearchHashtags(viewerID, q, limit)
+	hashtags, err := s.repo.SearchHashtags(ctx, viewerID, q, limit)
 	if err != nil {
 		return nil, err
 	}
 	return &dto.SearchResponse{Users: buildSearchUsers(users), Hashtags: buildSearchHashtags(hashtags)}, nil
 }
 
-func (s *SearchService) GetHashtagPosts(tag string, viewerID string, page, limit int) ([]dto.PostResponse, int64, error) {
+func (s *SearchService) GetHashtagPosts(ctx context.Context, tag string, viewerID string, page, limit int) ([]dto.PostResponse, int64, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -51,7 +52,7 @@ func (s *SearchService) GetHashtagPosts(tag string, viewerID string, page, limit
 	if viewerID != "" {
 		vid, _ = uuid.Parse(viewerID)
 	}
-	posts, total, err := s.repo.ListPostsByHashtag(tag, vid, page, limit)
+	posts, total, err := s.repo.ListPostsByHashtag(ctx, tag, vid, page, limit)
 	if err != nil {
 		return nil, 0, err
 	}

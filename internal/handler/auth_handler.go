@@ -23,7 +23,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.authService.Register(req)
+	res, err := h.authService.Register(c.Request.Context(), req)
 	if h.handleAuthError(c, err) {
 		return
 	}
@@ -36,7 +36,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.authService.Login(req)
+	res, err := h.authService.Login(c.Request.Context(), req)
 	if h.handleAuthError(c, err) {
 		return
 	}
@@ -48,7 +48,7 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.authService.VerifyOTP(req)
+	res, err := h.authService.VerifyOTP(c.Request.Context(), req)
 	if h.handleAuthError(c, err) {
 		return
 	}
@@ -61,7 +61,7 @@ func (h *AuthHandler) ResendOTP(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.ResendOTP(req)) {
+	if h.handleAuthError(c, h.authService.ResendOTP(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "OTP sent"})
@@ -73,7 +73,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.ForgotPassword(req)) {
+	if h.handleAuthError(c, h.authService.ForgotPassword(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "OTP sent"})
@@ -85,7 +85,7 @@ func (h *AuthHandler) RecoverUsername(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.RecoverUsername(req)) {
+	if h.handleAuthError(c, h.authService.RecoverUsername(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "OTP sent"})
@@ -97,7 +97,7 @@ func (h *AuthHandler) RecoverEmail(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.RecoverEmail(req)) {
+	if h.handleAuthError(c, h.authService.RecoverEmail(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "Recovery process initiated"})
@@ -109,7 +109,7 @@ func (h *AuthHandler) CompleteRecoverEmail(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.CompleteRecoverEmail(req)) {
+	if h.handleAuthError(c, h.authService.CompleteRecoverEmail(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "Email updated successfully"})
@@ -118,7 +118,7 @@ func (h *AuthHandler) CompleteRecoverEmail(c *gin.Context) {
 func (h *AuthHandler) CheckAvailability(c *gin.Context) {
 	var req dto.CheckAvailabilityRequest
 	_ = c.ShouldBindQuery(&req)
-	res, err := h.authService.CheckAvailability(req)
+	res, err := h.authService.CheckAvailability(c.Request.Context(), req)
 	if h.handleAuthError(c, err) {
 		return
 	}
@@ -135,7 +135,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleAuthError(c, h.authService.ResetPassword(req)) {
+	if h.handleAuthError(c, h.authService.ResetPassword(c.Request.Context(), req)) {
 		return
 	}
 	response.Success(c, gin.H{"message": "Password updated"})
@@ -147,7 +147,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.authService.RefreshToken(req)
+	res, err := h.authService.RefreshToken(c.Request.Context(), req)
 	if h.handleAuthError(c, err) {
 		return
 	}
@@ -155,8 +155,6 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// Untuk stateless JWT, mekanisme logout utamanya dilakukan di frontend dengan menghapus token.
-	// Kita sediakan endpoint ini untuk konsistensi API contract.
 	response.Success(c, gin.H{"message": "Logged out successfully"})
 }
 

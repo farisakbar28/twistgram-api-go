@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -20,7 +21,7 @@ func NewHighlightService(repo repository.HighlightRepository) *HighlightService 
 	return &HighlightService{repo: repo}
 }
 
-func (s *HighlightService) Create(userID uuid.UUID, req dto.CreateHighlightRequest) (*dto.HighlightResponse, error) {
+func (s *HighlightService) Create(ctx context.Context, userID uuid.UUID, req dto.CreateHighlightRequest) (*dto.HighlightResponse, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
@@ -32,41 +33,41 @@ func (s *HighlightService) Create(userID uuid.UUID, req dto.CreateHighlightReque
 		UserID: userID,
 		Title:  title,
 	}
-	if err := s.repo.CreateHighlight(highlight); err != nil {
+	if err := s.repo.CreateHighlight(ctx, highlight); err != nil {
 		return nil, err
 	}
 	return buildHighlightResponse(highlight, nil), nil
 }
 
-func (s *HighlightService) List(userID uuid.UUID) ([]dto.HighlightResponse, error) {
+func (s *HighlightService) List(ctx context.Context, userID uuid.UUID) ([]dto.HighlightResponse, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
-	highlights, err := s.repo.ListHighlightsByUser(userID)
+	highlights, err := s.repo.ListHighlightsByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]dto.HighlightResponse, 0, len(highlights))
 	for _, h := range highlights {
-		stories, _ := s.repo.ListHighlightStories(h.ID)
+		stories, _ := s.repo.ListHighlightStories(ctx, h.ID)
 		resp := buildHighlightResponse(&h, stories)
 		out = append(out, *resp)
 	}
 	return out, nil
 }
 
-func (s *HighlightService) Update(userID, highlightID uuid.UUID, req dto.UpdateHighlightRequest) error {
+func (s *HighlightService) Update(ctx context.Context, userID, highlightID uuid.UUID, req dto.UpdateHighlightRequest) error {
 	if userID == uuid.Nil || highlightID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	owns, err := s.repo.OwnsHighlight(highlightID, userID)
+	owns, err := s.repo.OwnsHighlight(ctx, highlightID, userID)
 	if err != nil {
 		return err
 	}
 	if !owns {
 		return ErrForbidden
 	}
-	highlight, err := s.repo.GetHighlightByID(highlightID)
+	highlight, err := s.repo.GetHighlightByID(ctx, highlightID)
 	if err != nil {
 		return ErrHighlightNotFound
 	}
@@ -75,28 +76,28 @@ func (s *HighlightService) Update(userID, highlightID uuid.UUID, req dto.UpdateH
 		return ErrInvalidInput
 	}
 	highlight.Title = title
-	return s.repo.UpdateHighlight(highlight)
+	return s.repo.UpdateHighlight(ctx, highlight)
 }
 
-func (s *HighlightService) Delete(userID, highlightID uuid.UUID) error {
+func (s *HighlightService) Delete(ctx context.Context, userID, highlightID uuid.UUID) error {
 	if userID == uuid.Nil || highlightID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	owns, err := s.repo.OwnsHighlight(highlightID, userID)
+	owns, err := s.repo.OwnsHighlight(ctx, highlightID, userID)
 	if err != nil {
 		return err
 	}
 	if !owns {
 		return ErrForbidden
 	}
-	return s.repo.DeleteHighlight(highlightID)
+	return s.repo.DeleteHighlight(ctx, highlightID)
 }
 
-func (s *HighlightService) AddStory(userID, highlightID uuid.UUID, req dto.AddStoryToHighlightRequest) error {
+func (s *HighlightService) AddStory(ctx context.Context, userID, highlightID uuid.UUID, req dto.AddStoryToHighlightRequest) error {
 	if userID == uuid.Nil || highlightID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	owns, err := s.repo.OwnsHighlight(highlightID, userID)
+	owns, err := s.repo.OwnsHighlight(ctx, highlightID, userID)
 	if err != nil {
 		return err
 	}
@@ -107,21 +108,21 @@ func (s *HighlightService) AddStory(userID, highlightID uuid.UUID, req dto.AddSt
 	if err != nil {
 		return ErrInvalidInput
 	}
-	return s.repo.AddStoryToHighlight(highlightID, storyID)
+	return s.repo.AddStoryToHighlight(ctx, highlightID, storyID)
 }
 
-func (s *HighlightService) RemoveStory(userID, highlightID, storyID uuid.UUID) error {
+func (s *HighlightService) RemoveStory(ctx context.Context, userID, highlightID, storyID uuid.UUID) error {
 	if userID == uuid.Nil || highlightID == uuid.Nil || storyID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	owns, err := s.repo.OwnsHighlight(highlightID, userID)
+	owns, err := s.repo.OwnsHighlight(ctx, highlightID, userID)
 	if err != nil {
 		return err
 	}
 	if !owns {
 		return ErrForbidden
 	}
-	return s.repo.RemoveStoryFromHighlight(highlightID, storyID)
+	return s.repo.RemoveStoryFromHighlight(ctx, highlightID, storyID)
 }
 
 func buildHighlightResponse(h *model.Highlight, stories []model.Story) *dto.HighlightResponse {

@@ -28,7 +28,7 @@ func (h *PostHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.postService.CreatePost(userID, req)
+	res, err := h.postService.CreatePost(c.Request.Context(), userID, req)
 	if err != nil {
 		response.InternalError(c, "Failed to create post")
 		return
@@ -43,13 +43,14 @@ func (h *PostHandler) Feed(c *gin.Context) {
 	}
 	pg := page(c)
 	lm := limit(c)
-	items, total, err := h.postService.Feed(userID, pg, lm)
+	items, total, err := h.postService.Feed(c.Request.Context(), userID, pg, lm)
 	if err != nil {
 		response.InternalError(c, "Failed to load feed")
 		return
 	}
 	response.WithPagination(c, gin.H{"posts": items}, buildMeta(pg, lm, total))
 }
+
 func (h *PostHandler) MyPosts(c *gin.Context) {
 	userID, ok := authUser(c)
 	if !ok {
@@ -57,7 +58,7 @@ func (h *PostHandler) MyPosts(c *gin.Context) {
 	}
 	pg := page(c)
 	lm := limit(c)
-	items, total, err := h.postService.MyPosts(userID, pg, lm)
+	items, total, err := h.postService.MyPosts(c.Request.Context(), userID, pg, lm)
 	if err != nil {
 		response.InternalError(c, "Failed to load posts")
 		return
@@ -76,7 +77,7 @@ func (h *PostHandler) UserPosts(c *gin.Context) {
 	}
 	pg := page(c)
 	lm := limit(c)
-	items, total, err := h.postService.UserPosts(viewerID, targetID, pg, lm)
+	items, total, err := h.postService.UserPosts(c.Request.Context(), viewerID, targetID, pg, lm)
 	if err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "User not found")
@@ -104,7 +105,7 @@ func (h *PostHandler) EditCaption(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if err := h.postService.EditCaption(userID, id, req); err != nil {
+	if err := h.postService.EditCaption(c.Request.Context(), userID, id, req); err != nil {
 		if errors.Is(err, service.ErrInvalidInput) {
 			response.BadRequest(c, "Invalid caption")
 		} else if errors.Is(err, service.ErrPostNotFound) {
@@ -128,7 +129,7 @@ func (h *PostHandler) Archive(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.postService.Archive(userID, id, true); err != nil {
+	if err := h.postService.Archive(c.Request.Context(), userID, id, true); err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "Post not found")
 		} else if errors.Is(err, service.ErrForbidden) {
@@ -140,6 +141,7 @@ func (h *PostHandler) Archive(c *gin.Context) {
 	}
 	response.Success(c, gin.H{"archived": true})
 }
+
 func (h *PostHandler) Unarchive(c *gin.Context) {
 	userID, ok := authUser(c)
 	if !ok {
@@ -149,7 +151,7 @@ func (h *PostHandler) Unarchive(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.postService.Archive(userID, id, false); err != nil {
+	if err := h.postService.Archive(c.Request.Context(), userID, id, false); err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "Post not found")
 		} else if errors.Is(err, service.ErrForbidden) {
@@ -161,6 +163,7 @@ func (h *PostHandler) Unarchive(c *gin.Context) {
 	}
 	response.Success(c, gin.H{"unarchived": true})
 }
+
 func (h *PostHandler) Delete(c *gin.Context) {
 	userID, ok := authUser(c)
 	if !ok {
@@ -170,7 +173,7 @@ func (h *PostHandler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.postService.Delete(userID, id); err != nil {
+	if err := h.postService.Delete(c.Request.Context(), userID, id); err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "Post not found")
 		} else if errors.Is(err, service.ErrForbidden) {
@@ -192,7 +195,7 @@ func (h *PostHandler) GetByID(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.postService.GetByID(userID, postID)
+	res, err := h.postService.GetByID(c.Request.Context(), userID, postID)
 	if err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "Post not found")
@@ -219,7 +222,7 @@ func (h *PostHandler) RemoveTag(c *gin.Context) {
 		response.BadRequest(c, "Invalid tagged user id")
 		return
 	}
-	if err := h.postService.RemoveTag(userID, postID, taggedUserID); err != nil {
+	if err := h.postService.RemoveTag(c.Request.Context(), userID, postID, taggedUserID); err != nil {
 		if errors.Is(err, service.ErrPostNotFound) {
 			response.NotFound(c, "Post not found")
 		} else if errors.Is(err, service.ErrForbidden) {
@@ -245,6 +248,7 @@ func authUser(c *gin.Context) (uuid.UUID, bool) {
 	}
 	return parsed, true
 }
+
 func parsePostID(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -253,6 +257,7 @@ func parsePostID(c *gin.Context) (uuid.UUID, bool) {
 	}
 	return id, true
 }
+
 func parsePostUserParam(c *gin.Context) (uuid.UUID, bool) {
 	id, err := uuid.Parse(c.Param("identifier"))
 	if err != nil {
@@ -261,6 +266,7 @@ func parsePostUserParam(c *gin.Context) (uuid.UUID, bool) {
 	}
 	return id, true
 }
+
 func page(c *gin.Context) int {
 	p, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	if p < 1 {
@@ -268,6 +274,7 @@ func page(c *gin.Context) int {
 	}
 	return p
 }
+
 func limit(c *gin.Context) int {
 	l, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if l < 1 {
@@ -278,6 +285,7 @@ func limit(c *gin.Context) int {
 	}
 	return l
 }
+
 func buildMeta(page, limit int, total int64) *response.Meta {
 	totalPages := 0
 	if limit > 0 && total > 0 {

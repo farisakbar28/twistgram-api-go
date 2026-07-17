@@ -26,7 +26,7 @@ func (h *HighlightHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.service.Create(userID, req)
+	res, err := h.service.Create(c.Request.Context(), userID, req)
 	if h.handleError(c, err) {
 		return
 	}
@@ -38,7 +38,7 @@ func (h *HighlightHandler) List(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, err := h.service.List(userID)
+	items, err := h.service.List(c.Request.Context(), userID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -59,7 +59,7 @@ func (h *HighlightHandler) Update(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleError(c, h.service.Update(userID, highlightID, req)) {
+	if h.handleError(c, h.service.Update(c.Request.Context(), userID, highlightID, req)) {
 		return
 	}
 	response.Success(c, gin.H{"updated": true})
@@ -74,7 +74,7 @@ func (h *HighlightHandler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.Delete(userID, highlightID)) {
+	if h.handleError(c, h.service.Delete(c.Request.Context(), userID, highlightID)) {
 		return
 	}
 	response.Success(c, gin.H{"deleted": true})
@@ -94,7 +94,7 @@ func (h *HighlightHandler) AddStory(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if h.handleError(c, h.service.AddStory(userID, highlightID, req)) {
+	if h.handleError(c, h.service.AddStory(c.Request.Context(), userID, highlightID, req)) {
 		return
 	}
 	response.Success(c, gin.H{"added": true})
@@ -113,7 +113,7 @@ func (h *HighlightHandler) RemoveStory(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.RemoveStory(userID, highlightID, storyID)) {
+	if h.handleError(c, h.service.RemoveStory(c.Request.Context(), userID, highlightID, storyID)) {
 		return
 	}
 	response.Success(c, gin.H{"removed": true})

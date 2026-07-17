@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"github.com/google/uuid"
@@ -20,12 +21,12 @@ func NewNotificationService(repo repository.NotificationRepository) *Notificatio
 	return &NotificationService{repo: repo}
 }
 
-func (s *NotificationService) List(recipientID uuid.UUID, page, limit int) ([]dto.NotificationResponse, int64, error) {
+func (s *NotificationService) List(ctx context.Context, recipientID uuid.UUID, page, limit int) ([]dto.NotificationResponse, int64, error) {
 	if recipientID == uuid.Nil {
 		return nil, 0, ErrInvalidInput
 	}
 	page, limit = normalizePagination(page, limit)
-	notifs, total, err := s.repo.ListByRecipient(recipientID, page, limit)
+	notifs, total, err := s.repo.ListByRecipient(ctx, recipientID, page, limit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -36,11 +37,11 @@ func (s *NotificationService) List(recipientID uuid.UUID, page, limit int) ([]dt
 	return out, total, nil
 }
 
-func (s *NotificationService) MarkRead(recipientID, notificationID uuid.UUID) error {
+func (s *NotificationService) MarkRead(ctx context.Context, recipientID, notificationID uuid.UUID) error {
 	if recipientID == uuid.Nil || notificationID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	if err := s.repo.MarkRead(notificationID, recipientID); errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := s.repo.MarkRead(ctx, notificationID, recipientID); errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrNotificationNotFound
 	} else if err != nil {
 		return err
@@ -48,14 +49,14 @@ func (s *NotificationService) MarkRead(recipientID, notificationID uuid.UUID) er
 	return nil
 }
 
-func (s *NotificationService) MarkAllRead(recipientID uuid.UUID) error {
+func (s *NotificationService) MarkAllRead(ctx context.Context, recipientID uuid.UUID) error {
 	if recipientID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	return s.repo.MarkAllRead(recipientID)
+	return s.repo.MarkAllRead(ctx, recipientID)
 }
 
-func (s *NotificationService) Create(actorID uuid.UUID, req dto.CreateNotificationRequest) error {
+func (s *NotificationService) Create(ctx context.Context, actorID uuid.UUID, req dto.CreateNotificationRequest) error {
 	if actorID == uuid.Nil {
 		return ErrInvalidInput
 	}
@@ -71,7 +72,7 @@ func (s *NotificationService) Create(actorID uuid.UUID, req dto.CreateNotificati
 		}
 	}
 	notif := &model.Notification{RecipientID: recID, ActorID: actorID, Type: req.Type, ReferenceID: refID}
-	return s.repo.CreateNotification(notif)
+	return s.repo.CreateNotification(ctx, notif)
 }
 
 func buildNotificationResponse(n model.Notification) dto.NotificationResponse {

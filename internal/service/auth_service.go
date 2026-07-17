@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -40,7 +41,7 @@ func NewAuthService(repo repository.AuthRepository, cfg *config.Config) *AuthSer
 	return &AuthService{repo: repo, cfg: cfg}
 }
 
-func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*dto.AuthResponse, error) {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.Username = strings.TrimSpace(strings.ToLower(req.Username))
 	req.Name = strings.TrimSpace(req.Name)
@@ -51,8 +52,7 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 		return nil, errors.New("password must be at least 8 chars, contain an uppercase letter and a number/symbol")
 	}
 
-	// Cek ketersediaan email
-	existingUser, err := s.repo.FindUserByEmail(req.Email)
+	existingUser, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
 		if !existingUser.EmailVerified {
 			return nil, errors.New("email already registered but not verified. please request a new OTP")
@@ -60,7 +60,7 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 		return nil, errors.New("email already registered")
 	}
 
-	userAvail, err := s.repo.IsUsernameAvailable(req.Username)
+	userAvail, err := s.repo.IsUsernameAvailable(ctx, req.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -95,14 +95,14 @@ func (s *AuthService) Register(req dto.RegisterRequest) (*dto.AuthResponse, erro
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
 
-	if err := s.repo.CreateUserWithOTP(user, otp); err != nil {
+	if err := s.repo.CreateUserWithOTP(ctx, user, otp); err != nil {
 		return nil, err
 	}
 	_ = mailer.SendOTPEmail(user.Email, otpCode)
 
 	return &dto.AuthResponse{
 		Message: "User registered, please verify OTP",
-		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email},
+		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email, EmailVerified: user.EmailVerified},
 	}, nil
 }
 
@@ -122,23 +122,22 @@ func isValidPassword(p string) bool {
 	return hasUpper && hasSpecialOrNumber
 }
 
-func (s *AuthService) ResendOTP(req dto.ResendOTPRequest) error {
+func (s *AuthService) ResendOTP(ctx context.Context, req dto.ResendOTPRequest) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" || req.Type == "" {
 		return ErrInvalidInput
 	}
 
-	user, err := s.repo.FindUserByEmail(req.Email)
+	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err != nil || user == nil {
 		return nil
-	} // Silent return to prevent email enumeration
+	}
 
 	if req.Type == "signup" && user.EmailVerified {
 		return errors.New("email is already verified")
 	}
 
-	// Delete old OTPs for this type
-	_ = s.repo.DeleteOTPByUserID(user.ID, req.Type)
+	_ = s.repo.DeleteOTPByUserID(ctx, user.ID, req.Type)
 
 	otpCode, _ := auth.GenerateOTP()
 	otp := &model.AuthOTP{
@@ -147,19 +146,18 @@ func (s *AuthService) ResendOTP(req dto.ResendOTPRequest) error {
 		Type:      req.Type,
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
-	_ = s.repo.SaveOTP(otp)
+	_ = s.repo.SaveOTP(ctx, otp)
 	_ = mailer.SendOTPEmail(user.Email, otpCode)
 
 	return nil
 }
 
-func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.AuthResponse, error) {
 	req.Identifier = strings.TrimSpace(strings.ToLower(req.Identifier))
 	if req.Identifier == "" || req.Password == "" {
 		return nil, ErrInvalidInput
 	}
 
-	// AUTH-04: Check per-user login rate limit (5 fails / 15 min)
 	if middleware.IsLoginLocked(req.Identifier) {
 		return nil, &AppError{Code: http.StatusTooManyRequests, Message: "Too many failed login attempts. Account locked for 15 minutes."}
 	}
@@ -168,9 +166,9 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 	var err error
 
 	if strings.Contains(req.Identifier, "@") {
-		user, err = s.repo.FindUserByEmail(req.Identifier)
+		user, err = s.repo.FindUserByEmail(ctx, req.Identifier)
 	} else {
-		user, err = s.repo.FindUserByUsername(req.Identifier)
+		user, err = s.repo.FindUserByUsername(ctx, req.Identifier)
 	}
 
 	if err != nil || user == nil {
@@ -183,10 +181,8 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 		return nil, ErrInvalidCredentials
 	}
 
-	// AUTH-04: Reset on successful login
 	middleware.ResetLoginAttempts(req.Identifier)
 
-	// AUTH-02: Unverified users can login but are restricted from post/follow/story
 	accessToken, refreshToken, err := auth.GenerateJWT(user.ID, user.Email, user.EmailVerified, user.TokenVersion, s.cfg.SupabaseJWTSecret)
 	if err != nil {
 		return nil, err
@@ -194,7 +190,7 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 
 	return &dto.AuthResponse{
 		Message: "Success",
-		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email},
+		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email, EmailVerified: user.EmailVerified},
 		Session: &dto.AuthSessionResponse{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
@@ -203,7 +199,7 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 	}, nil
 }
 
-func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) VerifyOTP(ctx context.Context, req dto.VerifyOTPRequest) (*dto.AuthResponse, error) {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.Token = strings.TrimSpace(req.Token)
 	req.Type = strings.TrimSpace(strings.ToLower(req.Type))
@@ -211,21 +207,21 @@ func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) (*dto.AuthResponse, er
 		return nil, ErrInvalidInput
 	}
 
-	user, err := s.repo.FindUserByEmail(req.Email)
+	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err != nil || user == nil {
 		return nil, ErrInvalidInput
 	}
 
-	otp, err := s.repo.FindValidOTP(user.ID, req.Token, req.Type)
+	otp, err := s.repo.FindValidOTP(ctx, user.ID, req.Token, req.Type)
 	if err != nil || otp == nil {
 		return nil, errors.New("Token has expired or is invalid")
 	}
 
-	_ = s.repo.DeleteOTP(otp.ID)
+	_ = s.repo.DeleteOTP(ctx, otp.ID)
 
 	if req.Type == "signup" {
 		user.EmailVerified = true
-		_ = s.repo.UpdateUser(user)
+		_ = s.repo.UpdateUser(ctx, user)
 	}
 
 	accessToken, refreshToken, err := auth.GenerateJWT(user.ID, user.Email, user.EmailVerified, user.TokenVersion, s.cfg.SupabaseJWTSecret)
@@ -235,7 +231,7 @@ func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) (*dto.AuthResponse, er
 
 	return &dto.AuthResponse{
 		Message: "Success",
-		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email},
+		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email, EmailVerified: user.EmailVerified},
 		Session: &dto.AuthSessionResponse{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,
@@ -244,16 +240,16 @@ func (s *AuthService) VerifyOTP(req dto.VerifyOTPRequest) (*dto.AuthResponse, er
 	}, nil
 }
 
-func (s *AuthService) ForgotPassword(req dto.ForgotPasswordRequest) error {
+func (s *AuthService) ForgotPassword(ctx context.Context, req dto.ForgotPasswordRequest) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" {
 		return ErrInvalidInput
 	}
 
-	user, err := s.repo.FindUserByEmail(req.Email)
+	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err != nil || user == nil {
 		return nil
-	} // Jangan bocorkan error kalau email tidak ada
+	}
 
 	otpCode, _ := auth.GenerateOTP()
 	otp := &model.AuthOTP{
@@ -262,37 +258,36 @@ func (s *AuthService) ForgotPassword(req dto.ForgotPasswordRequest) error {
 		Type:      "recovery",
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
-	_ = s.repo.SaveOTP(otp)
+	_ = s.repo.SaveOTP(ctx, otp)
 	_ = mailer.SendOTPEmail(user.Email, otpCode)
 
 	return nil
 }
 
-func (s *AuthService) RecoverUsername(req dto.RecoverUsernameRequest) error {
+func (s *AuthService) RecoverUsername(ctx context.Context, req dto.RecoverUsernameRequest) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	if req.Email == "" {
 		return ErrInvalidInput
 	}
-	user, err := s.repo.FindUserByEmail(req.Email)
+	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err != nil || user == nil {
 		return nil
 	}
 
-	// Skenario A (Lupa Username) - Kirim username ke email
 	subject := "Pemulihan Username Twistgram"
 	body := "Halo,\nUsername Twistgram Anda adalah: " + user.Username
 	_ = mailer.SendEmail(user.Email, subject, body)
 	return nil
 }
 
-func (s *AuthService) RecoverEmail(req dto.RecoverEmailRequest) error {
+func (s *AuthService) RecoverEmail(ctx context.Context, req dto.RecoverEmailRequest) error {
 	req.Username = strings.TrimSpace(strings.ToLower(req.Username))
 	req.Phone = strings.TrimSpace(req.Phone)
 	if req.Username == "" || req.Phone == "" {
 		return ErrInvalidInput
 	}
 
-	user, err := s.repo.FindUserByUsername(req.Username)
+	user, err := s.repo.FindUserByUsername(ctx, req.Username)
 	if err != nil || user == nil || user.Phone == nil || *user.Phone != req.Phone {
 		return nil
 	}
@@ -304,12 +299,11 @@ func (s *AuthService) RecoverEmail(req dto.RecoverEmailRequest) error {
 		Type:      "email_recovery",
 		ExpiresAt: time.Now().Add(10 * time.Minute),
 	}
-	_ = s.repo.SaveOTP(otp)
-	// In real world, send SMS. For MVP, print to console/stdout.
+	_ = s.repo.SaveOTP(ctx, otp)
 	return nil
 }
 
-func (s *AuthService) CompleteRecoverEmail(req dto.CompleteRecoverEmailRequest) error {
+func (s *AuthService) CompleteRecoverEmail(ctx context.Context, req dto.CompleteRecoverEmailRequest) error {
 	req.Username = strings.TrimSpace(strings.ToLower(req.Username))
 	req.Token = strings.TrimSpace(req.Token)
 	req.NewEmail = strings.TrimSpace(strings.ToLower(req.NewEmail))
@@ -317,33 +311,33 @@ func (s *AuthService) CompleteRecoverEmail(req dto.CompleteRecoverEmailRequest) 
 		return ErrInvalidInput
 	}
 
-	user, err := s.repo.FindUserByUsername(req.Username)
+	user, err := s.repo.FindUserByUsername(ctx, req.Username)
 	if err != nil || user == nil {
 		return errors.New("invalid recovery attempt")
 	}
 
-	otp, err := s.repo.FindValidOTP(user.ID, req.Token, "email_recovery")
+	otp, err := s.repo.FindValidOTP(ctx, user.ID, req.Token, "email_recovery")
 	if err != nil || otp == nil {
 		return errors.New("invalid recovery token")
 	}
 
 	user.Email = req.NewEmail
-	if err := s.repo.UpdateUser(user); err != nil {
+	if err := s.repo.UpdateUser(ctx, user); err != nil {
 		return err
 	}
 
-	_ = s.repo.DeleteOTP(otp.ID)
+	_ = s.repo.DeleteOTP(ctx, otp.ID)
 	return nil
 }
 
-func (s *AuthService) CheckAvailability(req dto.CheckAvailabilityRequest) (*dto.CheckAvailabilityResponse, error) {
+func (s *AuthService) CheckAvailability(ctx context.Context, req dto.CheckAvailabilityRequest) (*dto.CheckAvailabilityResponse, error) {
 	username := strings.TrimSpace(strings.ToLower(req.Username))
 	email := strings.TrimSpace(strings.ToLower(req.Email))
 	if username == "" && email == "" {
 		return nil, ErrInvalidInput
 	}
 	if username != "" {
-		available, err := s.repo.IsUsernameAvailable(username)
+		available, err := s.repo.IsUsernameAvailable(ctx, username)
 		if err != nil {
 			return nil, err
 		}
@@ -352,7 +346,7 @@ func (s *AuthService) CheckAvailability(req dto.CheckAvailabilityRequest) (*dto.
 		}
 	}
 	if email != "" {
-		available, err := s.repo.IsEmailAvailable(email)
+		available, err := s.repo.IsEmailAvailable(ctx, email)
 		if err != nil {
 			return nil, err
 		}
@@ -363,7 +357,7 @@ func (s *AuthService) CheckAvailability(req dto.CheckAvailabilityRequest) (*dto.
 	return &dto.CheckAvailabilityResponse{Available: true}, nil
 }
 
-func (s *AuthService) ResetPassword(req dto.ResetPasswordRequest) error {
+func (s *AuthService) ResetPassword(ctx context.Context, req dto.ResetPasswordRequest) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.Token = strings.TrimSpace(req.Token)
 	if req.Email == "" || req.Token == "" || req.Password == "" {
@@ -373,12 +367,12 @@ func (s *AuthService) ResetPassword(req dto.ResetPasswordRequest) error {
 		return errors.New("password must be at least 8 chars, contain an uppercase letter and a number/symbol")
 	}
 
-	user, err := s.repo.FindUserByEmail(req.Email)
+	user, err := s.repo.FindUserByEmail(ctx, req.Email)
 	if err != nil || user == nil {
 		return errors.New("invalid recovery token")
 	}
 
-	otp, err := s.repo.FindValidOTP(user.ID, req.Token, "recovery")
+	otp, err := s.repo.FindValidOTP(ctx, user.ID, req.Token, "recovery")
 	if err != nil || otp == nil {
 		return errors.New("invalid recovery token")
 	}
@@ -389,25 +383,23 @@ func (s *AuthService) ResetPassword(req dto.ResetPasswordRequest) error {
 	}
 
 	user.PasswordHash = &hash
-	// AUTH-05: Increment token version to invalidate all existing sessions
 	user.TokenVersion++
-	if err := s.repo.UpdateUser(user); err != nil {
+	if err := s.repo.UpdateUser(ctx, user); err != nil {
 		return err
 	}
 
-	_ = s.repo.DeleteOTP(otp.ID)
+	_ = s.repo.DeleteOTP(ctx, otp.ID)
 
 	return nil
 }
 
-func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, req dto.RefreshTokenRequest) (*dto.AuthResponse, error) {
 	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
 	if req.RefreshToken == "" {
 		return nil, ErrInvalidInput
 	}
 
 	token, err := jwt.Parse(req.RefreshToken, func(token *jwt.Token) (interface{}, error) {
-		// Validasi algoritma untuk mencegah "None" algorithm attack
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
@@ -436,7 +428,7 @@ func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthRespon
 		return nil, errors.New("invalid user id in token")
 	}
 
-	user, err := s.repo.FindUserByID(userID)
+	user, err := s.repo.FindUserByID(ctx, userID)
 	if err != nil || user == nil {
 		return nil, errors.New("user not found")
 	}
@@ -447,8 +439,8 @@ func (s *AuthService) RefreshToken(req dto.RefreshTokenRequest) (*dto.AuthRespon
 	}
 
 	return &dto.AuthResponse{
-		Message: "Token refreshed successfully",
-		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email},
+		Message: "Success",
+		User:    dto.AuthUserResponse{ID: user.ID.String(), Email: user.Email, EmailVerified: user.EmailVerified},
 		Session: &dto.AuthSessionResponse{
 			AccessToken:  accessToken,
 			RefreshToken: refreshToken,

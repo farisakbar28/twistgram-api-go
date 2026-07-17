@@ -21,7 +21,7 @@ func (h *NotificationHandler) ReadAll(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.service.MarkAllRead(userID); err != nil {
+	if err := h.service.MarkAllRead(c.Request.Context(), userID); err != nil {
 		response.InternalError(c, "Failed to mark notifications read")
 		return
 	}
@@ -38,7 +38,7 @@ func (h *NotificationHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	if err := h.service.Create(userID, req); err != nil {
+	if err := h.service.Create(c.Request.Context(), userID, req); err != nil {
 		response.InternalError(c, "Failed to create notification")
 		return
 	}
@@ -52,7 +52,7 @@ func (h *NotificationHandler) List(c *gin.Context) {
 	}
 	page := queryIntDM(c, "page", 1)
 	limit := queryIntDM(c, "limit", 20)
-	items, total, err := h.service.List(userID, page, limit)
+	items, total, err := h.service.List(c.Request.Context(), userID, page, limit)
 	if h.handleError(c, err) {
 		return
 	}
@@ -68,7 +68,7 @@ func (h *NotificationHandler) Read(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.MarkRead(userID, notificationID)) {
+	if h.handleError(c, h.service.MarkRead(c.Request.Context(), userID, notificationID)) {
 		return
 	}
 	response.Success(c, gin.H{"read": true})

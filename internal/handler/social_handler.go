@@ -28,7 +28,7 @@ func (h *SocialHandler) Follow(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.socialService.Follow(viewerID, targetID)
+	result, err := h.socialService.Follow(c.Request.Context(), viewerID, targetID)
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -44,7 +44,7 @@ func (h *SocialHandler) Unfollow(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.Unfollow(viewerID, targetID)) {
+	if h.handleSocialError(c, h.socialService.Unfollow(c.Request.Context(), viewerID, targetID)) {
 		return
 	}
 	response.Success(c, gin.H{"unfollowed": true})
@@ -55,7 +55,7 @@ func (h *SocialHandler) Followers(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, meta, err := h.socialService.ListFollowers(userID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
+	items, meta, err := h.socialService.ListFollowers(c.Request.Context(), userID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -67,7 +67,7 @@ func (h *SocialHandler) Following(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, meta, err := h.socialService.ListFollowing(userID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
+	items, meta, err := h.socialService.ListFollowing(c.Request.Context(), userID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -83,7 +83,7 @@ func (h *SocialHandler) RemoveFollower(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.RemoveFollower(viewerID, followerID)) {
+	if h.handleSocialError(c, h.socialService.RemoveFollower(c.Request.Context(), viewerID, followerID)) {
 		return
 	}
 	response.Success(c, gin.H{"removed": true})
@@ -94,7 +94,7 @@ func (h *SocialHandler) FollowRequests(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, meta, err := h.socialService.ListIncomingFollowRequests(viewerID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
+	items, meta, err := h.socialService.ListIncomingFollowRequests(c.Request.Context(), viewerID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -110,7 +110,7 @@ func (h *SocialHandler) ApproveFollowRequest(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.ApproveFollowRequest(viewerID, requesterID)) {
+	if h.handleSocialError(c, h.socialService.ApproveFollowRequest(c.Request.Context(), viewerID, requesterID)) {
 		return
 	}
 	response.Success(c, gin.H{"approved": true})
@@ -125,7 +125,7 @@ func (h *SocialHandler) DeclineFollowRequest(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.DeclineFollowRequest(viewerID, requesterID)) {
+	if h.handleSocialError(c, h.socialService.DeclineFollowRequest(c.Request.Context(), viewerID, requesterID)) {
 		return
 	}
 	response.Success(c, gin.H{"declined": true})
@@ -140,7 +140,7 @@ func (h *SocialHandler) Block(c *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := h.socialService.Block(viewerID, targetID)
+	result, err := h.socialService.Block(c.Request.Context(), viewerID, targetID)
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -156,7 +156,7 @@ func (h *SocialHandler) Unblock(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.Unblock(viewerID, targetID)) {
+	if h.handleSocialError(c, h.socialService.Unblock(c.Request.Context(), viewerID, targetID)) {
 		return
 	}
 	response.Success(c, gin.H{"unblocked": true})
@@ -167,7 +167,7 @@ func (h *SocialHandler) GetBlockedUsers(c *gin.Context) {
 	if !ok {
 		return
 	}
-	users, err := h.socialService.GetBlockedUsers(viewerID)
+	users, err := h.socialService.GetBlockedUsers(c.Request.Context(), viewerID)
 	if h.handleSocialError(c, err) {
 		return
 	}
@@ -184,14 +184,12 @@ func (h *SocialHandler) Report(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	result, err := h.socialService.Report(reporterID, req)
+	result, err := h.socialService.Report(c.Request.Context(), reporterID, req)
 	if h.handleSocialError(c, err) {
 		return
 	}
 	response.Created(c, gin.H{"report": result})
 }
-
-// Close Friends handlers
 
 func (h *SocialHandler) AddCloseFriend(c *gin.Context) {
 	viewerID, ok := getAuthenticatedUserID(c)
@@ -202,7 +200,7 @@ func (h *SocialHandler) AddCloseFriend(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.AddCloseFriend(viewerID, targetID)) {
+	if h.handleSocialError(c, h.socialService.AddCloseFriend(c.Request.Context(), viewerID, targetID)) {
 		return
 	}
 	response.Success(c, gin.H{"close_friend": true})
@@ -217,7 +215,7 @@ func (h *SocialHandler) RemoveCloseFriend(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleSocialError(c, h.socialService.RemoveCloseFriend(viewerID, targetID)) {
+	if h.handleSocialError(c, h.socialService.RemoveCloseFriend(c.Request.Context(), viewerID, targetID)) {
 		return
 	}
 	response.Success(c, gin.H{"close_friend": false})
@@ -228,7 +226,7 @@ func (h *SocialHandler) ListCloseFriends(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, meta, err := h.socialService.ListCloseFriends(viewerID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
+	items, meta, err := h.socialService.ListCloseFriends(c.Request.Context(), viewerID, queryInt(c, "page", 1), queryInt(c, "limit", 20))
 	if h.handleSocialError(c, err) {
 		return
 	}

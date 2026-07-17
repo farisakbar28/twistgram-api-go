@@ -26,7 +26,7 @@ func (h *StoryHandler) Create(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.service.Create(userID, req)
+	res, err := h.service.Create(c.Request.Context(), userID, req)
 	if h.handleError(c, err) {
 		return
 	}
@@ -42,7 +42,7 @@ func (h *StoryHandler) Delete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.Delete(userID, storyID)) {
+	if h.handleError(c, h.service.Delete(c.Request.Context(), userID, storyID)) {
 		return
 	}
 	response.Success(c, gin.H{"deleted": true})
@@ -57,7 +57,7 @@ func (h *StoryHandler) GetByID(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.service.GetByID(userID, storyID)
+	res, err := h.service.GetByID(c.Request.Context(), userID, storyID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -69,7 +69,7 @@ func (h *StoryHandler) Feed(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, err := h.service.Feed(userID)
+	items, err := h.service.Feed(c.Request.Context(), userID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -85,7 +85,7 @@ func (h *StoryHandler) RecordView(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.RecordView(userID, storyID)) {
+	if h.handleError(c, h.service.RecordView(c.Request.Context(), userID, storyID)) {
 		return
 	}
 	response.Success(c, gin.H{"viewed": true})
@@ -100,7 +100,7 @@ func (h *StoryHandler) Viewers(c *gin.Context) {
 	if !ok {
 		return
 	}
-	items, err := h.service.Viewers(userID, storyID)
+	items, err := h.service.Viewers(c.Request.Context(), userID, storyID)
 	if h.handleError(c, err) {
 		return
 	}

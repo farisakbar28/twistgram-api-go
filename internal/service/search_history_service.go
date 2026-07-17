@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ func NewSearchHistoryService(repo repository.SearchHistoryRepository) *SearchHis
 	return &SearchHistoryService{repo: repo}
 }
 
-func (s *SearchHistoryService) ListHistory(userID uuid.UUID, limit int) ([]dto.SearchHistoryItem, error) {
+func (s *SearchHistoryService) ListHistory(ctx context.Context, userID uuid.UUID, limit int) ([]dto.SearchHistoryItem, error) {
 	if userID == uuid.Nil {
 		return nil, ErrInvalidInput
 	}
@@ -26,7 +27,7 @@ func (s *SearchHistoryService) ListHistory(userID uuid.UUID, limit int) ([]dto.S
 	if limit > 50 {
 		limit = 50
 	}
-	items, err := s.repo.ListHistory(userID, limit)
+	items, err := s.repo.ListHistory(ctx, userID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func (s *SearchHistoryService) ListHistory(userID uuid.UUID, limit int) ([]dto.S
 	return out, nil
 }
 
-func (s *SearchHistoryService) SaveSearch(userID uuid.UUID, query, queryType string) error {
+func (s *SearchHistoryService) SaveSearch(ctx context.Context, userID uuid.UUID, query, queryType string) error {
 	if userID == uuid.Nil {
 		return ErrInvalidInput
 	}
@@ -54,19 +55,19 @@ func (s *SearchHistoryService) SaveSearch(userID uuid.UUID, query, queryType str
 	if queryType != "user" && queryType != "hashtag" {
 		queryType = "user"
 	}
-	return s.repo.SaveSearch(userID, q, queryType)
+	return s.repo.SaveSearch(ctx, userID, q, queryType)
 }
 
-func (s *SearchHistoryService) DeleteHistoryItem(userID, itemID uuid.UUID) error {
+func (s *SearchHistoryService) DeleteHistoryItem(ctx context.Context, userID, itemID uuid.UUID) error {
 	if userID == uuid.Nil || itemID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	return s.repo.DeleteHistoryItem(itemID, userID)
+	return s.repo.DeleteHistoryItem(ctx, itemID, userID)
 }
 
-func (s *SearchHistoryService) DeleteAllHistory(userID uuid.UUID) error {
+func (s *SearchHistoryService) DeleteAllHistory(ctx context.Context, userID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	return s.repo.DeleteAllHistory(userID)
+	return s.repo.DeleteAllHistory(ctx, userID)
 }

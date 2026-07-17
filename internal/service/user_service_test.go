@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ type fakeUserRepo struct {
 	updated        *model.User
 }
 
-func (f *fakeUserRepo) FindByID(id uuid.UUID) (*model.User, error) {
+func (f *fakeUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	if f.user == nil || f.user.ID != id {
 		return nil, gorm.ErrRecordNotFound
 	}
@@ -25,7 +26,7 @@ func (f *fakeUserRepo) FindByID(id uuid.UUID) (*model.User, error) {
 	return &copyUser, nil
 }
 
-func (f *fakeUserRepo) FindByUsername(username string) (*model.User, error) {
+func (f *fakeUserRepo) FindByUsername(ctx context.Context, username string) (*model.User, error) {
 	if f.user == nil || f.user.Username != username {
 		return nil, gorm.ErrRecordNotFound
 	}
@@ -33,33 +34,41 @@ func (f *fakeUserRepo) FindByUsername(username string) (*model.User, error) {
 	return &copyUser, nil
 }
 
-func (f *fakeUserRepo) UsernameExists(username string, excludeID uuid.UUID) (bool, error) {
+func (f *fakeUserRepo) UsernameExists(ctx context.Context, username string, excludeID uuid.UUID) (bool, error) {
 	return f.usernameExists, nil
 }
 
-func (f *fakeUserRepo) Update(user *model.User) error {
+func (f *fakeUserRepo) Update(ctx context.Context, user *model.User) error {
 	copyUser := *user
 	f.updated = &copyUser
 	f.user = &copyUser
 	return nil
 }
 
-func (f *fakeUserRepo) DeleteUser(id uuid.UUID) error { f.user = nil; return nil }
+func (f *fakeUserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error { f.user = nil; return nil }
 
-func (f *fakeUserRepo) IncrementTokenVersion(id uuid.UUID) error { return nil }
+func (f *fakeUserRepo) IncrementTokenVersion(ctx context.Context, id uuid.UUID) error { return nil }
 
-func (f *fakeUserRepo) GetInterests(userID uuid.UUID) ([]string, error)         { return nil, nil }
-func (f *fakeUserRepo) SetInterests(userID uuid.UUID, interests []string) error { return nil }
+func (f *fakeUserRepo) GetInterests(ctx context.Context, userID uuid.UUID) ([]string, error) {
+	return nil, nil
+}
+func (f *fakeUserRepo) SetInterests(ctx context.Context, userID uuid.UUID, interests []string) error {
+	return nil
+}
 
-func (f *fakeUserRepo) CountFollowers(userID uuid.UUID) (int64, error) {
+func (f *fakeUserRepo) CountFollowers(ctx context.Context, userID uuid.UUID) (int64, error) {
 	return 1, nil
 }
-func (f *fakeUserRepo) CountFollowing(userID uuid.UUID) (int64, error) { return 2, nil }
-func (f *fakeUserRepo) CountPosts(userID uuid.UUID) (int64, error)     { return 3, nil }
-func (f *fakeUserRepo) IsAcceptedFollower(followerID, followingID uuid.UUID) (bool, error) {
+func (f *fakeUserRepo) CountFollowing(ctx context.Context, userID uuid.UUID) (int64, error) {
+	return 2, nil
+}
+func (f *fakeUserRepo) CountPosts(ctx context.Context, userID uuid.UUID) (int64, error) {
+	return 3, nil
+}
+func (f *fakeUserRepo) IsAcceptedFollower(ctx context.Context, followerID, followingID uuid.UUID) (bool, error) {
 	return false, nil
 }
-func (f *fakeUserRepo) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+func (f *fakeUserRepo) IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
 	return false, nil
 }
 
@@ -78,7 +87,7 @@ func TestUpdateProfileUsernameChangeLimited(t *testing.T) {
 	})
 	newUsername := "new_name"
 
-	_, err := service.UpdateProfile(userID, dto.UpdateProfileRequest{Username: &newUsername})
+	_, err := service.UpdateProfile(context.Background(), userID, dto.UpdateProfileRequest{Username: &newUsername})
 	if !errors.Is(err, ErrUsernameChangeLimited) {
 		t.Fatalf("expected ErrUsernameChangeLimited, got %v", err)
 	}
@@ -111,7 +120,7 @@ func TestUpdateProfileUsernameTaken(t *testing.T) {
 	})
 	newUsername := "new_name"
 
-	_, err := service.UpdateProfile(userID, dto.UpdateProfileRequest{Username: &newUsername})
+	_, err := service.UpdateProfile(context.Background(), userID, dto.UpdateProfileRequest{Username: &newUsername})
 	if !errors.Is(err, ErrUsernameTaken) {
 		t.Fatalf("expected ErrUsernameTaken, got %v", err)
 	}
@@ -131,7 +140,7 @@ func TestGetPrivateProfileLimitedForNonFollower(t *testing.T) {
 	}}
 	service := NewUserService(repo)
 
-	profile, err := service.GetProfileByUsername("private_user", viewerID)
+	profile, err := service.GetProfileByUsername(context.Background(), "private_user", viewerID)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -30,18 +31,18 @@ func NewSocialService(repo repository.SocialRepository) *SocialService {
 	return &SocialService{repo: repo}
 }
 
-func (s *SocialService) Follow(viewerID, targetID uuid.UUID) (*dto.FollowStatusResponse, error) {
+func (s *SocialService) Follow(ctx context.Context, viewerID, targetID uuid.UUID) (*dto.FollowStatusResponse, error) {
 	if viewerID == targetID {
 		return nil, ErrSelfAction
 	}
-	target, err := s.repo.FindUserByID(targetID)
+	target, err := s.repo.FindUserByID(ctx, targetID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	blocked, err := s.repo.IsBlockedEitherDirection(viewerID, targetID)
+	blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, targetID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,64 +53,64 @@ func (s *SocialService) Follow(viewerID, targetID uuid.UUID) (*dto.FollowStatusR
 	if target.IsPrivate {
 		status = "pending"
 	}
-	if err := s.repo.UpsertFollow(&model.Follow{FollowerID: viewerID, FollowingID: targetID, Status: status}); err != nil {
+	if err := s.repo.UpsertFollow(ctx, &model.Follow{FollowerID: viewerID, FollowingID: targetID, Status: status}); err != nil {
 		return nil, err
 	}
 	notifType := "follow"
 	if status == "pending" {
 		notifType = "follow_request"
 	}
-	_ = s.repo.CreateNotification(&model.Notification{RecipientID: targetID, ActorID: viewerID, Type: notifType})
+	_ = s.repo.CreateNotification(ctx, &model.Notification{RecipientID: targetID, ActorID: viewerID, Type: notifType})
 	return &dto.FollowStatusResponse{TargetID: targetID.String(), Status: status}, nil
 }
 
-func (s *SocialService) Unfollow(viewerID, targetID uuid.UUID) error {
+func (s *SocialService) Unfollow(ctx context.Context, viewerID, targetID uuid.UUID) error {
 	if viewerID == targetID {
 		return ErrSelfAction
 	}
-	if err := s.ensureUserExists(targetID); err != nil {
+	if err := s.ensureUserExists(ctx, targetID); err != nil {
 		return err
 	}
-	return s.repo.DeleteFollow(viewerID, targetID)
+	return s.repo.DeleteFollow(ctx, viewerID, targetID)
 }
 
-func (s *SocialService) RemoveFollower(viewerID, followerID uuid.UUID) error {
+func (s *SocialService) RemoveFollower(ctx context.Context, viewerID, followerID uuid.UUID) error {
 	if viewerID == followerID {
 		return ErrSelfAction
 	}
-	if err := s.ensureUserExists(followerID); err != nil {
+	if err := s.ensureUserExists(ctx, followerID); err != nil {
 		return err
 	}
-	return s.repo.DeleteFollow(followerID, viewerID)
+	return s.repo.DeleteFollow(ctx, followerID, viewerID)
 }
 
-func (s *SocialService) ListFollowers(userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
-	if err := s.ensureUserExists(userID); err != nil {
+func (s *SocialService) ListFollowers(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
+	if err := s.ensureUserExists(ctx, userID); err != nil {
 		return nil, nil, err
 	}
 	page, limit = normalizePagination(page, limit)
-	users, total, err := s.repo.ListFollowers(userID, page, limit)
+	users, total, err := s.repo.ListFollowers(ctx, userID, page, limit)
 	if err != nil {
 		return nil, nil, err
 	}
 	return buildSocialUsers(users), buildMeta(page, limit, total), nil
 }
 
-func (s *SocialService) ListFollowing(userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
-	if err := s.ensureUserExists(userID); err != nil {
+func (s *SocialService) ListFollowing(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
+	if err := s.ensureUserExists(ctx, userID); err != nil {
 		return nil, nil, err
 	}
 	page, limit = normalizePagination(page, limit)
-	users, total, err := s.repo.ListFollowing(userID, page, limit)
+	users, total, err := s.repo.ListFollowing(ctx, userID, page, limit)
 	if err != nil {
 		return nil, nil, err
 	}
 	return buildSocialUsers(users), buildMeta(page, limit, total), nil
 }
 
-func (s *SocialService) ListIncomingFollowRequests(viewerID uuid.UUID, page, limit int) ([]dto.FollowRequestResponse, *response.Meta, error) {
+func (s *SocialService) ListIncomingFollowRequests(ctx context.Context, viewerID uuid.UUID, page, limit int) ([]dto.FollowRequestResponse, *response.Meta, error) {
 	page, limit = normalizePagination(page, limit)
-	follows, total, err := s.repo.ListIncomingFollowRequests(viewerID, page, limit)
+	follows, total, err := s.repo.ListIncomingFollowRequests(ctx, viewerID, page, limit)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,8 +121,8 @@ func (s *SocialService) ListIncomingFollowRequests(viewerID uuid.UUID, page, lim
 	return items, buildMeta(page, limit, total), nil
 }
 
-func (s *SocialService) ApproveFollowRequest(viewerID, requesterID uuid.UUID) error {
-	follow, err := s.repo.FindFollow(requesterID, viewerID)
+func (s *SocialService) ApproveFollowRequest(ctx context.Context, viewerID, requesterID uuid.UUID) error {
+	follow, err := s.repo.FindFollow(ctx, requesterID, viewerID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrFollowNotFound
 	}
@@ -134,11 +135,11 @@ func (s *SocialService) ApproveFollowRequest(viewerID, requesterID uuid.UUID) er
 	if follow.Status == "accepted" {
 		return nil
 	}
-	return s.repo.UpdateFollowStatus(requesterID, viewerID, "accepted")
+	return s.repo.UpdateFollowStatus(ctx, requesterID, viewerID, "accepted")
 }
 
-func (s *SocialService) DeclineFollowRequest(viewerID, requesterID uuid.UUID) error {
-	follow, err := s.repo.FindFollow(requesterID, viewerID)
+func (s *SocialService) DeclineFollowRequest(ctx context.Context, viewerID, requesterID uuid.UUID) error {
+	follow, err := s.repo.FindFollow(ctx, requesterID, viewerID)
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil
 	}
@@ -148,36 +149,36 @@ func (s *SocialService) DeclineFollowRequest(viewerID, requesterID uuid.UUID) er
 	if follow.FollowingID != viewerID {
 		return ErrFollowNotFound
 	}
-	return s.repo.DeleteFollow(requesterID, viewerID)
+	return s.repo.DeleteFollow(ctx, requesterID, viewerID)
 }
 
-func (s *SocialService) Block(viewerID, targetID uuid.UUID) (*dto.BlockStatusResponse, error) {
+func (s *SocialService) Block(ctx context.Context, viewerID, targetID uuid.UUID) (*dto.BlockStatusResponse, error) {
 	if viewerID == targetID {
 		return nil, ErrSelfAction
 	}
-	if err := s.ensureUserExists(targetID); err != nil {
+	if err := s.ensureUserExists(ctx, targetID); err != nil {
 		return nil, err
 	}
-	if err := s.repo.CreateBlock(&model.Block{BlockerID: viewerID, BlockedID: targetID}); err != nil {
+	if err := s.repo.CreateBlock(ctx, &model.Block{BlockerID: viewerID, BlockedID: targetID}); err != nil {
 		return nil, err
 	}
-	if err := s.repo.DeleteFollowsBetween(viewerID, targetID); err != nil {
+	if err := s.repo.DeleteFollowsBetween(ctx, viewerID, targetID); err != nil {
 		return nil, err
 	}
 	return &dto.BlockStatusResponse{TargetID: targetID.String(), Blocked: true}, nil
 }
 
-func (s *SocialService) Unblock(viewerID, targetID uuid.UUID) error {
+func (s *SocialService) Unblock(ctx context.Context, viewerID, targetID uuid.UUID) error {
 	if viewerID == targetID {
 		return ErrSelfAction
 	}
-	if err := s.ensureUserExists(targetID); err != nil {
+	if err := s.ensureUserExists(ctx, targetID); err != nil {
 		return err
 	}
-	return s.repo.DeleteBlock(viewerID, targetID)
+	return s.repo.DeleteBlock(ctx, viewerID, targetID)
 }
 
-func (s *SocialService) Report(reporterID uuid.UUID, req dto.ReportRequest) (*dto.ReportResponse, error) {
+func (s *SocialService) Report(ctx context.Context, reporterID uuid.UUID, req dto.ReportRequest) (*dto.ReportResponse, error) {
 	targetID, err := uuid.Parse(req.TargetID)
 	if err != nil {
 		return nil, ErrInvalidInput
@@ -187,18 +188,18 @@ func (s *SocialService) Report(reporterID uuid.UUID, req dto.ReportRequest) (*dt
 	if !validReason(reason) {
 		return nil, ErrInvalidReason
 	}
-	if err := s.validateReportTarget(reporterID, targetType, targetID); err != nil {
+	if err := s.validateReportTarget(ctx, reporterID, targetType, targetID); err != nil {
 		return nil, err
 	}
 	report := &model.Report{ReporterID: reporterID, TargetType: targetType, TargetID: targetID, Reason: reason, Status: "pending"}
-	if err := s.repo.CreateReport(report); err != nil {
+	if err := s.repo.CreateReport(ctx, report); err != nil {
 		return nil, err
 	}
 	return &dto.ReportResponse{ID: report.ID.String(), TargetType: report.TargetType, TargetID: report.TargetID.String(), Reason: report.Reason, Status: report.Status, CreatedAt: report.CreatedAt}, nil
 }
 
-func (s *SocialService) GetBlockedUsers(viewerID uuid.UUID) ([]dto.SocialUserResponse, error) {
-	blocks, err := s.repo.FindBlocksByBlocker(viewerID)
+func (s *SocialService) GetBlockedUsers(ctx context.Context, viewerID uuid.UUID) ([]dto.SocialUserResponse, error) {
+	blocks, err := s.repo.FindBlocksByBlocker(ctx, viewerID)
 	if err != nil {
 		return nil, err
 	}
@@ -209,45 +210,43 @@ func (s *SocialService) GetBlockedUsers(viewerID uuid.UUID) ([]dto.SocialUserRes
 	return out, nil
 }
 
-// Close Friends
-
-func (s *SocialService) AddCloseFriend(userID, targetID uuid.UUID) error {
+func (s *SocialService) AddCloseFriend(ctx context.Context, userID, targetID uuid.UUID) error {
 	if userID == targetID {
 		return ErrSelfAction
 	}
-	if err := s.ensureUserExists(targetID); err != nil {
+	if err := s.ensureUserExists(ctx, targetID); err != nil {
 		return err
 	}
-	return s.repo.SetCloseFriend(userID, targetID, true)
+	return s.repo.SetCloseFriend(ctx, userID, targetID, true)
 }
 
-func (s *SocialService) RemoveCloseFriend(userID, targetID uuid.UUID) error {
+func (s *SocialService) RemoveCloseFriend(ctx context.Context, userID, targetID uuid.UUID) error {
 	if userID == targetID {
 		return ErrSelfAction
 	}
-	if err := s.ensureUserExists(targetID); err != nil {
+	if err := s.ensureUserExists(ctx, targetID); err != nil {
 		return err
 	}
-	return s.repo.SetCloseFriend(userID, targetID, false)
+	return s.repo.SetCloseFriend(ctx, userID, targetID, false)
 }
 
-func (s *SocialService) ListCloseFriends(userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
-	if err := s.ensureUserExists(userID); err != nil {
+func (s *SocialService) ListCloseFriends(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.SocialUserResponse, *response.Meta, error) {
+	if err := s.ensureUserExists(ctx, userID); err != nil {
 		return nil, nil, err
 	}
 	page, limit = normalizePagination(page, limit)
-	users, total, err := s.repo.ListCloseFriends(userID, page, limit)
+	users, total, err := s.repo.ListCloseFriends(ctx, userID, page, limit)
 	if err != nil {
 		return nil, nil, err
 	}
 	return buildSocialUsers(users), buildMeta(page, limit, total), nil
 }
 
-func (s *SocialService) EnsureProfileVisible(viewerID, targetID uuid.UUID) error {
+func (s *SocialService) EnsureProfileVisible(ctx context.Context, viewerID, targetID uuid.UUID) error {
 	if viewerID == uuid.Nil || viewerID == targetID {
 		return nil
 	}
-	blocked, err := s.repo.IsBlockedEitherDirection(viewerID, targetID)
+	blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, targetID)
 	if err != nil {
 		return err
 	}
@@ -257,8 +256,8 @@ func (s *SocialService) EnsureProfileVisible(viewerID, targetID uuid.UUID) error
 	return nil
 }
 
-func (s *SocialService) ensureUserExists(userID uuid.UUID) error {
-	exists, err := s.repo.UserExists(userID)
+func (s *SocialService) ensureUserExists(ctx context.Context, userID uuid.UUID) error {
+	exists, err := s.repo.UserExists(ctx, userID)
 	if err != nil {
 		return err
 	}
@@ -268,13 +267,13 @@ func (s *SocialService) ensureUserExists(userID uuid.UUID) error {
 	return nil
 }
 
-func (s *SocialService) validateReportTarget(reporterID uuid.UUID, targetType string, targetID uuid.UUID) error {
+func (s *SocialService) validateReportTarget(ctx context.Context, reporterID uuid.UUID, targetType string, targetID uuid.UUID) error {
 	switch targetType {
 	case "user":
 		if reporterID == targetID {
 			return ErrSelfAction
 		}
-		exists, err := s.repo.UserExists(targetID)
+		exists, err := s.repo.UserExists(ctx, targetID)
 		if err != nil {
 			return err
 		}
@@ -282,7 +281,7 @@ func (s *SocialService) validateReportTarget(reporterID uuid.UUID, targetType st
 			return ErrTargetNotFound
 		}
 	case "post":
-		exists, err := s.repo.PostExists(targetID)
+		exists, err := s.repo.PostExists(ctx, targetID)
 		if err != nil {
 			return err
 		}
@@ -290,7 +289,7 @@ func (s *SocialService) validateReportTarget(reporterID uuid.UUID, targetType st
 			return ErrTargetNotFound
 		}
 	case "comment":
-		exists, err := s.repo.CommentExists(targetID)
+		exists, err := s.repo.CommentExists(ctx, targetID)
 		if err != nil {
 			return err
 		}

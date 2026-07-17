@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strings"
@@ -13,13 +14,13 @@ import (
 
 var ErrPostNotFound = errors.New("post not found")
 var ErrForbidden = errors.New("forbidden")
-var hashtagRegex = regexp.MustCompile(`#[^\s!@#$%^&*()=+.\/,\[{\]};:'"?><]+`)
+var hashtagRegex = regexp.MustCompile("#[^\\s!@#$%^&*()=+.//,\\[{\\]};:'\"?><]+")
 
 type PostService struct{ repo repository.PostRepository }
 
 func NewPostService(repo repository.PostRepository) *PostService { return &PostService{repo: repo} }
 
-func (s *PostService) CreatePost(userID uuid.UUID, req dto.CreatePostRequest) (*dto.PostResponse, error) {
+func (s *PostService) CreatePost(ctx context.Context, userID uuid.UUID, req dto.CreatePostRequest) (*dto.PostResponse, error) {
 	if userID == uuid.Nil || len(req.Media) == 0 {
 		return nil, ErrInvalidInput
 	}
@@ -57,16 +58,20 @@ func (s *PostService) CreatePost(userID uuid.UUID, req dto.CreatePostRequest) (*
 		}
 	}
 
-	if err := s.repo.CreatePostWithMediaAndTags(post, media, tags, hashtags); err != nil {
+	if err := s.repo.CreatePostWithMediaAndTags(ctx, post, media, tags, hashtags); err != nil {
 		return nil, err
 	}
 
-	// Send mention notifications
 	for _, tag := range tags {
-		_ = s.repo.CreateNotification(&model.Notification{RecipientID: tag.TaggedUserID, ActorID: userID, Type: "mention", ReferenceID: &post.ID})
+		_ = s.repo.CreateNotification(ctx, &model.Notification{RecipientID: tag.TaggedUserID, ActorID: userID, Type: "mention", ReferenceID: &post.ID})
 	}
 
-	return &dto.PostResponse{ID: post.ID.String(), UserID: userID.String(), Caption: post.Caption, Location: post.Location, IsArchived: post.IsArchived, CommentsDisabled: post.CommentsDisabled, CreatedAt: post.CreatedAt}, nil
+	// Re-fetch post with relations
+	p, _ := s.repo.GetPostWithMedia(ctx, post.ID)
+	if p == nil { p = post }
+
+	res := buildPosts([]model.Post{*p})
+	return &res[0], nil
 }
 
 func validateCreatePostRequest(req dto.CreatePostRequest) error {
@@ -88,14 +93,13 @@ func validateCreatePostRequest(req dto.CreatePostRequest) error {
 	return nil
 }
 
-func (s *PostService) Feed(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
-	posts, total, err := s.repo.ListFeed(userID, page, limit)
+func (s *PostService) Feed(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+	posts, total, err := s.repo.ListFeed(ctx, userID, page, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	if total == 0 {
-		// Fallback to global explore if no following posts
-		fbPosts, fbTotal, fbErr := s.repo.ListGlobalFeed(limit)
+		fbPosts, fbTotal, fbErr := s.repo.ListGlobalFeed(ctx, userID, limit)
 		if fbErr != nil {
 			return nil, 0, fbErr
 		}
@@ -103,31 +107,29 @@ func (s *PostService) Feed(userID uuid.UUID, page, limit int) ([]dto.PostRespons
 	}
 	return buildPosts(posts), total, nil
 }
-func (s *PostService) MyPosts(userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
-	posts, total, err := s.repo.ListUserPosts(userID, page, limit)
+
+func (s *PostService) MyPosts(ctx context.Context, userID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+	posts, total, err := s.repo.ListUserPosts(ctx, userID, page, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 	return buildPosts(posts), total, nil
 }
 
-// UserPosts returns posts for a specific user with privacy and block checks.
-func (s *PostService) UserPosts(viewerID, targetUserID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
+func (s *PostService) UserPosts(ctx context.Context, viewerID, targetUserID uuid.UUID, page, limit int) ([]dto.PostResponse, int64, error) {
 	if targetUserID == uuid.Nil {
 		return nil, 0, ErrPostNotFound
 	}
 
-	// If viewing own posts, show all non-archived
 	if viewerID == targetUserID {
-		posts, total, err := s.repo.ListUserPosts(targetUserID, page, limit)
+		posts, total, err := s.repo.ListUserPosts(ctx, targetUserID, page, limit)
 		if err != nil {
 			return nil, 0, err
 		}
 		return buildPosts(posts), total, nil
 	}
 
-	// Check if blocked (either direction)
-	blocked, err := s.repo.IsBlockedEitherDirection(viewerID, targetUserID)
+	blocked, err := s.repo.IsBlockedEitherDirection(ctx, viewerID, targetUserID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -135,15 +137,13 @@ func (s *PostService) UserPosts(viewerID, targetUserID uuid.UUID, page, limit in
 		return nil, 0, ErrForbidden
 	}
 
-	// Check if target is private
-	isPrivate, err := s.repo.IsUserPrivate(targetUserID)
+	isPrivate, err := s.repo.IsUserPrivate(ctx, targetUserID)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// If private, check if viewer is accepted follower
 	if isPrivate {
-		isFollower, err := s.repo.IsAcceptedFollower(viewerID, targetUserID)
+		isFollower, err := s.repo.IsAcceptedFollower(ctx, viewerID, targetUserID)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -152,12 +152,11 @@ func (s *PostService) UserPosts(viewerID, targetUserID uuid.UUID, page, limit in
 		}
 	}
 
-	posts, total, err := s.repo.ListUserPosts(targetUserID, page, limit)
+	posts, total, err := s.repo.ListUserPosts(ctx, targetUserID, page, limit)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Filter out archived posts for non-owners
 	if len(posts) > 0 {
 		filtered := make([]model.Post, 0, len(posts))
 		for _, p := range posts {
@@ -170,32 +169,34 @@ func (s *PostService) UserPosts(viewerID, targetUserID uuid.UUID, page, limit in
 
 	return buildPosts(posts), total, nil
 }
-func (s *PostService) Archive(userID, postID uuid.UUID, archived bool) error {
-	exists, err := s.repo.PostExists(postID)
+
+func (s *PostService) Archive(ctx context.Context, userID, postID uuid.UUID, archived bool) error {
+	exists, err := s.repo.PostExists(ctx, postID)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrPostNotFound
 	}
-	owns, err := s.repo.OwnsPost(postID, userID)
+	owns, err := s.repo.OwnsPost(ctx, postID, userID)
 	if err != nil {
 		return err
 	}
 	if !owns {
 		return ErrForbidden
 	}
-	return s.repo.SetArchived(postID, userID, archived)
+	return s.repo.SetArchived(ctx, postID, userID, archived)
 }
-func (s *PostService) EditCaption(userID, postID uuid.UUID, req dto.UpdatePostRequest) error {
-	exists, err := s.repo.PostExists(postID)
+
+func (s *PostService) EditCaption(ctx context.Context, userID, postID uuid.UUID, req dto.UpdatePostRequest) error {
+	exists, err := s.repo.PostExists(ctx, postID)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrPostNotFound
 	}
-	owns, err := s.repo.OwnsPost(postID, userID)
+	owns, err := s.repo.OwnsPost(ctx, postID, userID)
 	if err != nil {
 		return err
 	}
@@ -206,105 +207,106 @@ func (s *PostService) EditCaption(userID, postID uuid.UUID, req dto.UpdatePostRe
 	if req.Caption != nil && len(strings.TrimSpace(*req.Caption)) > 2200 {
 		return ErrInvalidInput
 	}
-	return s.repo.UpdateCaption(postID, userID, cleanOptional(req.Caption))
+	return s.repo.UpdateCaption(ctx, postID, userID, cleanOptional(req.Caption))
 }
 
-func (s *PostService) Delete(userID, postID uuid.UUID) error {
-	exists, err := s.repo.PostExists(postID)
+func (s *PostService) Delete(ctx context.Context, userID, postID uuid.UUID) error {
+	exists, err := s.repo.PostExists(ctx, postID)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrPostNotFound
 	}
-	owns, err := s.repo.OwnsPost(postID, userID)
+	owns, err := s.repo.OwnsPost(ctx, postID, userID)
 	if err != nil {
 		return err
 	}
 	if !owns {
 		return ErrForbidden
 	}
-	return s.repo.DeletePost(postID, userID)
+	return s.repo.DeletePost(ctx, postID, userID)
 }
 
-func (s *PostService) RemoveTag(userID, postID, taggedUserID uuid.UUID) error {
-	exists, err := s.repo.PostExists(postID)
+func (s *PostService) RemoveTag(ctx context.Context, userID, postID, taggedUserID uuid.UUID) error {
+	exists, err := s.repo.PostExists(ctx, postID)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		return ErrPostNotFound
 	}
-	owns, err := s.repo.OwnsPost(postID, userID)
+	owns, err := s.repo.OwnsPost(ctx, postID, userID)
 	if err != nil {
 		return err
 	}
-	// CNT-05: Post owner OR tagged user (self-removal) can remove tag
 	if !owns && userID != taggedUserID {
 		return ErrForbidden
 	}
-	return s.repo.DeletePostTag(postID, taggedUserID)
+	return s.repo.DeletePostTag(ctx, postID, taggedUserID)
 }
 
-// GetByID returns a single post with full detail (media, tags, hashtags, user).
-func (s *PostService) GetByID(userID, postID uuid.UUID) (*dto.PostResponse, error) {
+func (s *PostService) GetByID(ctx context.Context, userID, postID uuid.UUID) (*dto.PostResponse, error) {
 	if postID == uuid.Nil {
 		return nil, ErrPostNotFound
 	}
-	post, err := s.repo.GetPostByID(postID)
+	post, err := s.repo.GetPostByID(ctx, postID)
 	if err != nil {
 		return nil, ErrPostNotFound
 	}
 
-	// CNT-03: archived posts visible only to owner
 	if post.IsArchived && post.UserID != userID {
 		return nil, ErrPostNotFound
 	}
 
-	resp := &dto.PostResponse{
-		ID:               post.ID.String(),
-		UserID:           post.UserID.String(),
-		Caption:          post.Caption,
-		Location:         post.Location,
-		IsArchived:       post.IsArchived,
-		CommentsDisabled: post.CommentsDisabled,
-		CreatedAt:        post.CreatedAt,
-	}
-	if len(post.Media) > 0 {
-		resp.Media = make([]dto.PostMediaResponse, 0, len(post.Media))
-		for _, m := range post.Media {
-			resp.Media = append(resp.Media, dto.PostMediaResponse{
-				MediaURL:      m.MediaURL,
-				MediaType:     m.MediaType,
-				OrderIndex:    m.OrderIndex,
-				MusicTrackURL: m.MusicTrackURL,
-			})
-		}
-	}
-	return resp, nil
+	res := buildPosts([]model.Post{*post})
+	return &res[0], nil
 }
 
 func buildPosts(posts []model.Post) []dto.PostResponse {
 	out := make([]dto.PostResponse, 0, len(posts))
 	for _, p := range posts {
 		resp := dto.PostResponse{
-			ID:               p.ID.String(),
-			UserID:           p.UserID.String(),
+			PostID:           p.ID.String(),
+			PostType:         "IMAGE", // default fallback
+			User: dto.PostUserResponse{
+				UserID:   p.UserID.String(),
+				Username: p.User.Username,
+			},
 			Caption:          p.Caption,
 			Location:         p.Location,
 			IsArchived:       p.IsArchived,
 			CommentsDisabled: p.CommentsDisabled,
 			CreatedAt:        p.CreatedAt,
+			Metrics: dto.PostMetricsResponse{
+				// MVP Phase: Set defaults; fully query these dynamically via repository
+				LikesCount:    0,
+				CommentsCount: 0,
+				HasLiked:      false,
+				HasSaved:      false,
+			},
 		}
+
+		if p.User.AvatarURL != nil {
+			resp.User.AvatarURL = p.User.AvatarURL
+		}
+		// Try to pull is_verified if we fetch it (Phase 3, but default false)
+		
 		if len(p.Media) > 0 {
-			resp.Media = make([]dto.PostMediaResponse, 0, len(p.Media))
-			for _, m := range p.Media {
-				resp.Media = append(resp.Media, dto.PostMediaResponse{
-					MediaURL:      m.MediaURL,
-					MediaType:     m.MediaType,
-					OrderIndex:    m.OrderIndex,
-					MusicTrackURL: m.MusicTrackURL,
-				})
+			if len(p.Media) == 1 {
+				resp.PostType = strings.ToUpper(p.Media[0].MediaType)
+				url := p.Media[0].MediaURL
+				resp.MediaURL = &url
+			} else {
+				resp.PostType = "CAROUSEL"
+				resp.MediaItems = make([]dto.PostMediaResponse, 0, len(p.Media))
+				for _, m := range p.Media {
+					resp.MediaItems = append(resp.MediaItems, dto.PostMediaResponse{
+						MediaID: m.ID.String(),
+						Type:    strings.ToUpper(m.MediaType),
+						URL:     m.MediaURL,
+					})
+				}
 			}
 		}
 		out = append(out, resp)
@@ -322,3 +324,6 @@ func cleanOptional(value *string) *string {
 	}
 	return &trimmed
 }
+
+
+

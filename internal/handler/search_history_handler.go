@@ -21,7 +21,7 @@ func (h *SearchHistoryHandler) List(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	items, err := h.service.ListHistory(userID, limit)
+	items, err := h.service.ListHistory(c.Request.Context(), userID, limit)
 	if err != nil {
 		response.InternalError(c, "Failed to load search history")
 		return
@@ -36,7 +36,7 @@ func (h *SearchHistoryHandler) Save(c *gin.Context) {
 	}
 	query := c.Query("q")
 	queryType := c.DefaultQuery("type", "user")
-	if err := h.service.SaveSearch(userID, query, queryType); err != nil {
+	if err := h.service.SaveSearch(c.Request.Context(), userID, query, queryType); err != nil {
 		response.BadRequest(c, "Invalid request")
 		return
 	}
@@ -53,7 +53,7 @@ func (h *SearchHistoryHandler) DeleteItem(c *gin.Context) {
 		response.BadRequest(c, "Invalid history id")
 		return
 	}
-	if err := h.service.DeleteHistoryItem(userID, itemID); err != nil {
+	if err := h.service.DeleteHistoryItem(c.Request.Context(), userID, itemID); err != nil {
 		response.InternalError(c, "Failed to delete history item")
 		return
 	}
@@ -65,7 +65,7 @@ func (h *SearchHistoryHandler) DeleteAll(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.service.DeleteAllHistory(userID); err != nil {
+	if err := h.service.DeleteAllHistory(c.Request.Context(), userID); err != nil {
 		response.InternalError(c, "Failed to delete history")
 		return
 	}

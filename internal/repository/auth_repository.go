@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,18 +10,18 @@ import (
 )
 
 type AuthRepository interface {
-	CreateUserWithOTP(user *model.User, otp *model.AuthOTP) error
-	FindUserByEmail(email string) (*model.User, error)
-	FindUserByUsername(username string) (*model.User, error)
-	FindUserByPhone(phone string) (*model.User, error)
-	FindUserByID(id uuid.UUID) (*model.User, error)
-	SaveOTP(otp *model.AuthOTP) error
-	FindValidOTP(userID uuid.UUID, code, otpType string) (*model.AuthOTP, error)
-	DeleteOTP(id uuid.UUID) error
-	DeleteOTPByUserID(userID uuid.UUID, otpType string) error
-	UpdateUser(user *model.User) error
-	IsUsernameAvailable(username string) (bool, error)
-	IsEmailAvailable(email string) (bool, error)
+	CreateUserWithOTP(ctx context.Context, user *model.User, otp *model.AuthOTP) error
+	FindUserByEmail(ctx context.Context, email string) (*model.User, error)
+	FindUserByUsername(ctx context.Context, username string) (*model.User, error)
+	FindUserByPhone(ctx context.Context, phone string) (*model.User, error)
+	FindUserByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	SaveOTP(ctx context.Context, otp *model.AuthOTP) error
+	FindValidOTP(ctx context.Context, userID uuid.UUID, code, otpType string) (*model.AuthOTP, error)
+	DeleteOTP(ctx context.Context, id uuid.UUID) error
+	DeleteOTPByUserID(ctx context.Context, userID uuid.UUID, otpType string) error
+	UpdateUser(ctx context.Context, user *model.User) error
+	IsUsernameAvailable(ctx context.Context, username string) (bool, error)
+	IsEmailAvailable(ctx context.Context, email string) (bool, error)
 }
 
 type LocalAuthRepository struct {
@@ -31,8 +32,8 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 	return &LocalAuthRepository{db: db}
 }
 
-func (r *LocalAuthRepository) CreateUserWithOTP(user *model.User, otp *model.AuthOTP) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
+func (r *LocalAuthRepository) CreateUserWithOTP(ctx context.Context, user *model.User, otp *model.AuthOTP) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(user).Error; err != nil {
 			return err
 		}
@@ -41,60 +42,60 @@ func (r *LocalAuthRepository) CreateUserWithOTP(user *model.User, otp *model.Aut
 	})
 }
 
-func (r *LocalAuthRepository) FindUserByEmail(email string) (*model.User, error) {
+func (r *LocalAuthRepository) FindUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	var u model.User
-	err := r.db.Where("email = ?", email).First(&u).Error
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
 	return &u, err
 }
 
-func (r *LocalAuthRepository) FindUserByUsername(username string) (*model.User, error) {
+func (r *LocalAuthRepository) FindUserByUsername(ctx context.Context, username string) (*model.User, error) {
 	var u model.User
-	err := r.db.Where("username = ?", username).First(&u).Error
+	err := r.db.WithContext(ctx).Where("username = ?", username).First(&u).Error
 	return &u, err
 }
 
-func (r *LocalAuthRepository) FindUserByPhone(phone string) (*model.User, error) {
+func (r *LocalAuthRepository) FindUserByPhone(ctx context.Context, phone string) (*model.User, error) {
 	var u model.User
-	err := r.db.Where("phone = ?", phone).First(&u).Error
+	err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	return &u, err
 }
 
-func (r *LocalAuthRepository) FindUserByID(id uuid.UUID) (*model.User, error) {
+func (r *LocalAuthRepository) FindUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var u model.User
-	err := r.db.Where("id = ?", id).First(&u).Error
+	err := r.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
 	return &u, err
 }
 
-func (r *LocalAuthRepository) SaveOTP(otp *model.AuthOTP) error {
-	return r.db.Create(otp).Error
+func (r *LocalAuthRepository) SaveOTP(ctx context.Context, otp *model.AuthOTP) error {
+	return r.db.WithContext(ctx).Create(otp).Error
 }
 
-func (r *LocalAuthRepository) FindValidOTP(userID uuid.UUID, code, otpType string) (*model.AuthOTP, error) {
+func (r *LocalAuthRepository) FindValidOTP(ctx context.Context, userID uuid.UUID, code, otpType string) (*model.AuthOTP, error) {
 	var otp model.AuthOTP
-	err := r.db.Where("user_id = ? AND code = ? AND type = ? AND expires_at > ?", userID, code, otpType, time.Now()).First(&otp).Error
+	err := r.db.WithContext(ctx).Where("user_id = ? AND code = ? AND type = ? AND expires_at > ?", userID, code, otpType, time.Now()).First(&otp).Error
 	return &otp, err
 }
 
-func (r *LocalAuthRepository) DeleteOTP(id uuid.UUID) error {
-	return r.db.Where("id = ?", id).Delete(&model.AuthOTP{}).Error
+func (r *LocalAuthRepository) DeleteOTP(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.AuthOTP{}).Error
 }
 
-func (r *LocalAuthRepository) DeleteOTPByUserID(userID uuid.UUID, otpType string) error {
-	return r.db.Where("user_id = ? AND type = ?", userID, otpType).Delete(&model.AuthOTP{}).Error
+func (r *LocalAuthRepository) DeleteOTPByUserID(ctx context.Context, userID uuid.UUID, otpType string) error {
+	return r.db.WithContext(ctx).Where("user_id = ? AND type = ?", userID, otpType).Delete(&model.AuthOTP{}).Error
 }
 
-func (r *LocalAuthRepository) UpdateUser(user *model.User) error {
-	return r.db.Save(user).Error
+func (r *LocalAuthRepository) UpdateUser(ctx context.Context, user *model.User) error {
+	return r.db.WithContext(ctx).Save(user).Error
 }
 
-func (r *LocalAuthRepository) IsUsernameAvailable(username string) (bool, error) {
+func (r *LocalAuthRepository) IsUsernameAvailable(ctx context.Context, username string) (bool, error) {
 	var count int64
-	err := r.db.Table("users").Where("username = ?", username).Count(&count).Error
+	err := r.db.WithContext(ctx).Table("users").Where("username = ?", username).Count(&count).Error
 	return count == 0, err
 }
 
-func (r *LocalAuthRepository) IsEmailAvailable(email string) (bool, error) {
+func (r *LocalAuthRepository) IsEmailAvailable(ctx context.Context, email string) (bool, error) {
 	var count int64
-	err := r.db.Table("users").Where("email = ?", email).Count(&count).Error
+	err := r.db.WithContext(ctx).Table("users").Where("email = ?", email).Count(&count).Error
 	return count == 0, err
 }

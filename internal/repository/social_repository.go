@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -8,29 +10,29 @@ import (
 )
 
 type SocialRepository interface {
-	FindUserByID(id uuid.UUID) (*model.User, error)
-	FindFollow(followerID, followingID uuid.UUID) (*model.Follow, error)
-	UpsertFollow(follow *model.Follow) error
-	DeleteFollow(followerID, followingID uuid.UUID) error
-	DeleteFollowsBetween(userA, userB uuid.UUID) error
-	ListFollowers(userID uuid.UUID, page, limit int) ([]model.User, int64, error)
-	ListFollowing(userID uuid.UUID, page, limit int) ([]model.User, int64, error)
-	ListIncomingFollowRequests(userID uuid.UUID, page, limit int) ([]model.Follow, int64, error)
-	UpdateFollowStatus(followerID, followingID uuid.UUID, status string) error
-	IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error)
-	FindBlock(blockerID, blockedID uuid.UUID) (*model.Block, error)
-	FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error)
-	CreateBlock(block *model.Block) error
-	DeleteBlock(blockerID, blockedID uuid.UUID) error
-	CreateReport(report *model.Report) error
-	UserExists(id uuid.UUID) (bool, error)
-	PostExists(id uuid.UUID) (bool, error)
-	CommentExists(id uuid.UUID) (bool, error)
-	CreateNotification(notification *model.Notification) error
+	FindUserByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	FindFollow(ctx context.Context, followerID, followingID uuid.UUID) (*model.Follow, error)
+	UpsertFollow(ctx context.Context, follow *model.Follow) error
+	DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error
+	DeleteFollowsBetween(ctx context.Context, userA, userB uuid.UUID) error
+	ListFollowers(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error)
+	ListFollowing(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error)
+	ListIncomingFollowRequests(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.Follow, int64, error)
+	UpdateFollowStatus(ctx context.Context, followerID, followingID uuid.UUID, status string) error
+	IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error)
+	FindBlock(ctx context.Context, blockerID, blockedID uuid.UUID) (*model.Block, error)
+	FindBlocksByBlocker(ctx context.Context, blockerID uuid.UUID) ([]model.Block, error)
+	CreateBlock(ctx context.Context, block *model.Block) error
+	DeleteBlock(ctx context.Context, blockerID, blockedID uuid.UUID) error
+	CreateReport(ctx context.Context, report *model.Report) error
+	UserExists(ctx context.Context, id uuid.UUID) (bool, error)
+	PostExists(ctx context.Context, id uuid.UUID) (bool, error)
+	CommentExists(ctx context.Context, id uuid.UUID) (bool, error)
+	CreateNotification(ctx context.Context, notification *model.Notification) error
 	// Close Friends
-	SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error
-	ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error)
-	IsCloseFriend(userID, targetID uuid.UUID) (bool, error)
+	SetCloseFriend(ctx context.Context, followerID, followingID uuid.UUID, isCloseFriend bool) error
+	ListCloseFriends(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error)
+	IsCloseFriend(ctx context.Context, userID, targetID uuid.UUID) (bool, error)
 }
 
 type GormSocialRepository struct {
@@ -41,41 +43,41 @@ func NewSocialRepository(db *gorm.DB) SocialRepository {
 	return &GormSocialRepository{db: db}
 }
 
-func (r *GormSocialRepository) FindUserByID(id uuid.UUID) (*model.User, error) {
+func (r *GormSocialRepository) FindUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
-	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *GormSocialRepository) FindFollow(followerID, followingID uuid.UUID) (*model.Follow, error) {
+func (r *GormSocialRepository) FindFollow(ctx context.Context, followerID, followingID uuid.UUID) (*model.Follow, error) {
 	var follow model.Follow
-	err := r.db.First(&follow, "follower_id = ? AND following_id = ?", followerID, followingID).Error
+	err := r.db.WithContext(ctx).First(&follow, "follower_id = ? AND following_id = ?", followerID, followingID).Error
 	if err != nil {
 		return nil, err
 	}
 	return &follow, nil
 }
 
-func (r *GormSocialRepository) UpsertFollow(follow *model.Follow) error {
-	return r.db.Clauses(clause.OnConflict{
+func (r *GormSocialRepository) UpsertFollow(ctx context.Context, follow *model.Follow) error {
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "follower_id"}, {Name: "following_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{"status"}),
 	}).Create(follow).Error
 }
 
-func (r *GormSocialRepository) DeleteFollow(followerID, followingID uuid.UUID) error {
-	return r.db.Where("follower_id = ? AND following_id = ?", followerID, followingID).Delete(&model.Follow{}).Error
+func (r *GormSocialRepository) DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("follower_id = ? AND following_id = ?", followerID, followingID).Delete(&model.Follow{}).Error
 }
 
-func (r *GormSocialRepository) DeleteFollowsBetween(userA, userB uuid.UUID) error {
-	return r.db.Where("(follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)", userA, userB, userB, userA).Delete(&model.Follow{}).Error
+func (r *GormSocialRepository) DeleteFollowsBetween(ctx context.Context, userA, userB uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("(follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)", userA, userB, userB, userA).Delete(&model.Follow{}).Error
 }
 
-func (r *GormSocialRepository) ListFollowers(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+func (r *GormSocialRepository) ListFollowers(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	var total int64
-	query := r.db.Model(&model.User{}).Joins("JOIN follows ON follows.follower_id = users.id").Where("follows.following_id = ? AND follows.status = ?", userID, "accepted")
+	query := r.db.WithContext(ctx).Model(&model.User{}).Joins("JOIN follows ON follows.follower_id = users.id").Where("follows.following_id = ? AND follows.status = ?", userID, "accepted")
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -84,9 +86,9 @@ func (r *GormSocialRepository) ListFollowers(userID uuid.UUID, page, limit int) 
 	return users, total, err
 }
 
-func (r *GormSocialRepository) ListFollowing(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+func (r *GormSocialRepository) ListFollowing(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	var total int64
-	query := r.db.Model(&model.User{}).Joins("JOIN follows ON follows.following_id = users.id").Where("follows.follower_id = ? AND follows.status = ?", userID, "accepted")
+	query := r.db.WithContext(ctx).Model(&model.User{}).Joins("JOIN follows ON follows.following_id = users.id").Where("follows.follower_id = ? AND follows.status = ?", userID, "accepted")
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -95,9 +97,9 @@ func (r *GormSocialRepository) ListFollowing(userID uuid.UUID, page, limit int) 
 	return users, total, err
 }
 
-func (r *GormSocialRepository) ListIncomingFollowRequests(userID uuid.UUID, page, limit int) ([]model.Follow, int64, error) {
+func (r *GormSocialRepository) ListIncomingFollowRequests(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.Follow, int64, error) {
 	var total int64
-	query := r.db.Model(&model.Follow{}).Preload("Follower").Where("following_id = ? AND status = ?", userID, "pending")
+	query := r.db.WithContext(ctx).Model(&model.Follow{}).Preload("Follower").Where("following_id = ? AND status = ?", userID, "pending")
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -106,8 +108,8 @@ func (r *GormSocialRepository) ListIncomingFollowRequests(userID uuid.UUID, page
 	return follows, total, err
 }
 
-func (r *GormSocialRepository) UpdateFollowStatus(followerID, followingID uuid.UUID, status string) error {
-	result := r.db.Model(&model.Follow{}).Where("follower_id = ? AND following_id = ?", followerID, followingID).Update("status", status)
+func (r *GormSocialRepository) UpdateFollowStatus(ctx context.Context, followerID, followingID uuid.UUID, status string) error {
+	result := r.db.WithContext(ctx).Model(&model.Follow{}).Where("follower_id = ? AND following_id = ?", followerID, followingID).Update("status", status)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -117,79 +119,77 @@ func (r *GormSocialRepository) UpdateFollowStatus(followerID, followingID uuid.U
 	return nil
 }
 
-func (r *GormSocialRepository) CreateNotification(notification *model.Notification) error {
-	return r.db.Create(notification).Error
+func (r *GormSocialRepository) CreateNotification(ctx context.Context, notification *model.Notification) error {
+	return CreateNotificationHelper(ctx, r.db, notification)
 }
 
-func (r *GormSocialRepository) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+func (r *GormSocialRepository) IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.Block{}).Where("(blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)", userA, userB, userB, userA).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&model.Block{}).Where("(blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)", userA, userB, userB, userA).Count(&count).Error
 	return count > 0, err
 }
 
-func (r *GormSocialRepository) FindBlock(blockerID, blockedID uuid.UUID) (*model.Block, error) {
+func (r *GormSocialRepository) FindBlock(ctx context.Context, blockerID, blockedID uuid.UUID) (*model.Block, error) {
 	var block model.Block
-	err := r.db.First(&block, "blocker_id = ? AND blocked_id = ?", blockerID, blockedID).Error
+	err := r.db.WithContext(ctx).First(&block, "blocker_id = ? AND blocked_id = ?", blockerID, blockedID).Error
 	if err != nil {
 		return nil, err
 	}
 	return &block, nil
 }
 
-func (r *GormSocialRepository) CreateBlock(block *model.Block) error {
-	return r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(block).Error
+func (r *GormSocialRepository) CreateBlock(ctx context.Context, block *model.Block) error {
+	return r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(block).Error
 }
 
-func (r *GormSocialRepository) DeleteBlock(blockerID, blockedID uuid.UUID) error {
-	return r.db.Where("blocker_id = ? AND blocked_id = ?", blockerID, blockedID).Delete(&model.Block{}).Error
+func (r *GormSocialRepository) DeleteBlock(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	return r.db.WithContext(ctx).Where("blocker_id = ? AND blocked_id = ?", blockerID, blockedID).Delete(&model.Block{}).Error
 }
 
-func (r *GormSocialRepository) FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error) {
+func (r *GormSocialRepository) FindBlocksByBlocker(ctx context.Context, blockerID uuid.UUID) ([]model.Block, error) {
 	var blocks []model.Block
-	err := r.db.Where("blocker_id = ?", blockerID).Preload("Blocked").Find(&blocks).Error
+	err := r.db.WithContext(ctx).Where("blocker_id = ?", blockerID).Preload("Blocked").Find(&blocks).Error
 	return blocks, err
 }
 
-func (r *GormSocialRepository) CreateReport(report *model.Report) error {
-	return r.db.Create(report).Error
+func (r *GormSocialRepository) CreateReport(ctx context.Context, report *model.Report) error {
+	return r.db.WithContext(ctx).Create(report).Error
 }
 
-func (r *GormSocialRepository) UserExists(id uuid.UUID) (bool, error) {
+func (r *GormSocialRepository) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.User{}).Where("id = ?", id).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).Count(&count).Error
 	return count > 0, err
 }
 
-func (r *GormSocialRepository) PostExists(id uuid.UUID) (bool, error) {
+func (r *GormSocialRepository) PostExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.Post{}).Where("id = ? AND deleted_at IS NULL", id).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&model.Post{}).Where("id = ? AND deleted_at IS NULL", id).Count(&count).Error
 	return count > 0, err
 }
 
-func (r *GormSocialRepository) CommentExists(id uuid.UUID) (bool, error) {
+func (r *GormSocialRepository) CommentExists(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.Comment{}).Where("id = ? AND deleted_at IS NULL", id).Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&model.Comment{}).Where("id = ? AND deleted_at IS NULL", id).Count(&count).Error
 	return count > 0, err
 }
 
 // Close Friends implementation
 
-func (r *GormSocialRepository) SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error {
-	// Verify follower->following relationship exists and is accepted
+func (r *GormSocialRepository) SetCloseFriend(ctx context.Context, followerID, followingID uuid.UUID, isCloseFriend bool) error {
 	var follow model.Follow
-	err := r.db.Where("follower_id = ? AND following_id = ? AND status = ?", followerID, followingID, "accepted").First(&follow).Error
+	err := r.db.WithContext(ctx).Where("follower_id = ? AND following_id = ? AND status = ?", followerID, followingID, "accepted").First(&follow).Error
 	if err != nil {
 		return err
 	}
-	return r.db.Model(&model.Follow{}).
+	return r.db.WithContext(ctx).Model(&model.Follow{}).
 		Where("follower_id = ? AND following_id = ?", followerID, followingID).
 		Update("is_close_friend", isCloseFriend).Error
 }
 
-func (r *GormSocialRepository) ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
-	// Close friends are people WHO FOLLOWED the user and marked is_close_friend
+func (r *GormSocialRepository) ListCloseFriends(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	var total int64
-	query := r.db.Model(&model.User{}).
+	query := r.db.WithContext(ctx).Model(&model.User{}).
 		Joins("JOIN follows ON follows.follower_id = users.id").
 		Where("follows.following_id = ? AND follows.status = ? AND follows.is_close_friend = ?", userID, "accepted", true)
 	if err := query.Count(&total).Error; err != nil {
@@ -200,9 +200,9 @@ func (r *GormSocialRepository) ListCloseFriends(userID uuid.UUID, page, limit in
 	return users, total, err
 }
 
-func (r *GormSocialRepository) IsCloseFriend(userID, targetID uuid.UUID) (bool, error) {
+func (r *GormSocialRepository) IsCloseFriend(ctx context.Context, userID, targetID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Model(&model.Follow{}).
+	err := r.db.WithContext(ctx).Model(&model.Follow{}).
 		Where("follower_id = ? AND following_id = ? AND status = ? AND is_close_friend = ?", userID, targetID, "accepted", true).
 		Count(&count).Error
 	return count > 0, err

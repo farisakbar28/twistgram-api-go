@@ -27,7 +27,7 @@ func (h *InteractionHandler) LikePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.service.LikePost(userID, postID)
+	res, err := h.service.LikePost(c.Request.Context(), userID, postID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -43,7 +43,7 @@ func (h *InteractionHandler) UnlikePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.UnlikePost(userID, postID)) {
+	if h.handleError(c, h.service.UnlikePost(c.Request.Context(), userID, postID)) {
 		return
 	}
 	response.Success(c, gin.H{"unliked": true})
@@ -63,7 +63,7 @@ func (h *InteractionHandler) Comment(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.service.CreateComment(userID, postID, req)
+	res, err := h.service.CreateComment(c.Request.Context(), userID, postID, req)
 	if h.handleError(c, err) {
 		return
 	}
@@ -81,7 +81,7 @@ func (h *InteractionHandler) ListComments(c *gin.Context) {
 	}
 	page := _page(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	items, total, err := h.service.ListComments(userID, postID, page, limit)
+	items, total, err := h.service.ListComments(c.Request.Context(), userID, postID, page, limit)
 	if h.handleError(c, err) {
 		return
 	}
@@ -99,7 +99,7 @@ func (h *InteractionHandler) ListSavedPosts(c *gin.Context) {
 	}
 	page := _page(c)
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	items, total, err := h.service.ListSavedPosts(userID, page, limit)
+	items, total, err := h.service.ListSavedPosts(c.Request.Context(), userID, page, limit)
 	if h.handleError(c, err) {
 		return
 	}
@@ -119,7 +119,7 @@ func (h *InteractionHandler) SharePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.service.SharePost(userID, postID)
+	res, err := h.service.SharePost(c.Request.Context(), userID, postID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -135,7 +135,7 @@ func (h *InteractionHandler) DeleteComment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.DeleteComment(userID, commentID)) {
+	if h.handleError(c, h.service.DeleteComment(c.Request.Context(), userID, commentID)) {
 		return
 	}
 	response.Success(c, gin.H{"deleted": true})
@@ -150,7 +150,7 @@ func (h *InteractionHandler) LikeComment(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.service.LikeComment(userID, commentID)
+	res, err := h.service.LikeComment(c.Request.Context(), userID, commentID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -166,7 +166,7 @@ func (h *InteractionHandler) SavePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	res, err := h.service.SavePost(userID, postID)
+	res, err := h.service.SavePost(c.Request.Context(), userID, postID)
 	if h.handleError(c, err) {
 		return
 	}
@@ -182,7 +182,7 @@ func (h *InteractionHandler) UnsavePost(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if h.handleError(c, h.service.UnsavePost(userID, postID)) {
+	if h.handleError(c, h.service.UnsavePost(c.Request.Context(), userID, postID)) {
 		return
 	}
 	response.Success(c, gin.H{"unsaved": true})

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -21,15 +22,17 @@ type fakeSocialRepo struct {
 	reports        []*model.Report
 }
 
-func (f *fakeSocialRepo) CreateNotification(n *model.Notification) error { return nil }
-func (f *fakeSocialRepo) FindUserByID(id uuid.UUID) (*model.User, error) {
+func (f *fakeSocialRepo) CreateNotification(ctx context.Context, n *model.Notification) error {
+	return nil
+}
+func (f *fakeSocialRepo) FindUserByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	if user, ok := f.users[id]; ok {
 		copyUser := *user
 		return &copyUser, nil
 	}
 	return nil, gorm.ErrRecordNotFound
 }
-func (f *fakeSocialRepo) FindFollow(followerID, followingID uuid.UUID) (*model.Follow, error) {
+func (f *fakeSocialRepo) FindFollow(ctx context.Context, followerID, followingID uuid.UUID) (*model.Follow, error) {
 	follow, ok := f.follows[[2]uuid.UUID{followerID, followingID}]
 	if !ok {
 		return nil, gorm.ErrRecordNotFound
@@ -37,7 +40,7 @@ func (f *fakeSocialRepo) FindFollow(followerID, followingID uuid.UUID) (*model.F
 	copyFollow := *follow
 	return &copyFollow, nil
 }
-func (f *fakeSocialRepo) UpsertFollow(follow *model.Follow) error {
+func (f *fakeSocialRepo) UpsertFollow(ctx context.Context, follow *model.Follow) error {
 	if f.follows == nil {
 		f.follows = map[[2]uuid.UUID]*model.Follow{}
 	}
@@ -45,24 +48,24 @@ func (f *fakeSocialRepo) UpsertFollow(follow *model.Follow) error {
 	f.follows[[2]uuid.UUID{follow.FollowerID, follow.FollowingID}] = &copyFollow
 	return nil
 }
-func (f *fakeSocialRepo) DeleteFollow(followerID, followingID uuid.UUID) error {
+func (f *fakeSocialRepo) DeleteFollow(ctx context.Context, followerID, followingID uuid.UUID) error {
 	delete(f.follows, [2]uuid.UUID{followerID, followingID})
 	return nil
 }
-func (f *fakeSocialRepo) DeleteFollowsBetween(userA, userB uuid.UUID) error {
+func (f *fakeSocialRepo) DeleteFollowsBetween(ctx context.Context, userA, userB uuid.UUID) error {
 	f.deletedBetween = true
 	return nil
 }
-func (f *fakeSocialRepo) ListFollowers(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+func (f *fakeSocialRepo) ListFollowers(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	return nil, 0, nil
 }
-func (f *fakeSocialRepo) ListFollowing(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+func (f *fakeSocialRepo) ListFollowing(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	return nil, 0, nil
 }
-func (f *fakeSocialRepo) ListIncomingFollowRequests(userID uuid.UUID, page, limit int) ([]model.Follow, int64, error) {
+func (f *fakeSocialRepo) ListIncomingFollowRequests(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.Follow, int64, error) {
 	return nil, 0, nil
 }
-func (f *fakeSocialRepo) UpdateFollowStatus(followerID, followingID uuid.UUID, status string) error {
+func (f *fakeSocialRepo) UpdateFollowStatus(ctx context.Context, followerID, followingID uuid.UUID, status string) error {
 	follow, ok := f.follows[[2]uuid.UUID{followerID, followingID}]
 	if !ok {
 		return gorm.ErrRecordNotFound
@@ -70,36 +73,49 @@ func (f *fakeSocialRepo) UpdateFollowStatus(followerID, followingID uuid.UUID, s
 	follow.Status = status
 	return nil
 }
-func (f *fakeSocialRepo) IsBlockedEitherDirection(userA, userB uuid.UUID) (bool, error) {
+func (f *fakeSocialRepo) IsBlockedEitherDirection(ctx context.Context, userA, userB uuid.UUID) (bool, error) {
 	return f.blocksEither, nil
 }
-func (f *fakeSocialRepo) FindBlock(blockerID, blockedID uuid.UUID) (*model.Block, error) {
+func (f *fakeSocialRepo) FindBlock(ctx context.Context, blockerID, blockedID uuid.UUID) (*model.Block, error) {
 	return nil, gorm.ErrRecordNotFound
 }
-func (f *fakeSocialRepo) FindBlocksByBlocker(blockerID uuid.UUID) ([]model.Block, error) {
+func (f *fakeSocialRepo) FindBlocksByBlocker(ctx context.Context, blockerID uuid.UUID) ([]model.Block, error) {
 	return nil, nil
 }
-func (f *fakeSocialRepo) CreateBlock(block *model.Block) error             { f.blockCreated = true; return nil }
-func (f *fakeSocialRepo) DeleteBlock(blockerID, blockedID uuid.UUID) error { return nil }
-func (f *fakeSocialRepo) CreateReport(report *model.Report) error {
+func (f *fakeSocialRepo) CreateBlock(ctx context.Context, block *model.Block) error {
+	f.blockCreated = true
+	return nil
+}
+func (f *fakeSocialRepo) DeleteBlock(ctx context.Context, blockerID, blockedID uuid.UUID) error {
+	return nil
+}
+func (f *fakeSocialRepo) CreateReport(ctx context.Context, report *model.Report) error {
 	if report.ID == uuid.Nil {
 		report.ID = uuid.New()
 	}
 	f.reports = append(f.reports, report)
 	return nil
 }
-func (f *fakeSocialRepo) UserExists(id uuid.UUID) (bool, error)    { _, ok := f.users[id]; return ok, nil }
-func (f *fakeSocialRepo) PostExists(id uuid.UUID) (bool, error)    { return f.postExists, nil }
-func (f *fakeSocialRepo) CommentExists(id uuid.UUID) (bool, error) { return f.commentExists, nil }
+func (f *fakeSocialRepo) UserExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	_, ok := f.users[id]
+	return ok, nil
+}
+func (f *fakeSocialRepo) PostExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	return f.postExists, nil
+}
+func (f *fakeSocialRepo) CommentExists(ctx context.Context, id uuid.UUID) (bool, error) {
+	return f.commentExists, nil
+}
 
-// Close Friends
-func (f *fakeSocialRepo) SetCloseFriend(followerID, followingID uuid.UUID, isCloseFriend bool) error {
+func (f *fakeSocialRepo) SetCloseFriend(ctx context.Context, followerID, followingID uuid.UUID, isCloseFriend bool) error {
 	return nil
 }
-func (f *fakeSocialRepo) ListCloseFriends(userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
+func (f *fakeSocialRepo) ListCloseFriends(ctx context.Context, userID uuid.UUID, page, limit int) ([]model.User, int64, error) {
 	return nil, 0, nil
 }
-func (f *fakeSocialRepo) IsCloseFriend(userID, targetID uuid.UUID) (bool, error) { return false, nil }
+func (f *fakeSocialRepo) IsCloseFriend(ctx context.Context, userID, targetID uuid.UUID) (bool, error) {
+	return false, nil
+}
 
 func TestFollowPrivateUserCreatesPendingRequest(t *testing.T) {
 	viewerID := uuid.New()
@@ -107,7 +123,7 @@ func TestFollowPrivateUserCreatesPendingRequest(t *testing.T) {
 	repo := &fakeSocialRepo{users: map[uuid.UUID]*model.User{targetID: {ID: targetID, IsPrivate: true}}}
 	svc := NewSocialService(repo)
 
-	result, err := svc.Follow(viewerID, targetID)
+	result, err := svc.Follow(context.Background(), viewerID, targetID)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -125,7 +141,7 @@ func TestFollowBlockedUserFails(t *testing.T) {
 	repo := &fakeSocialRepo{users: map[uuid.UUID]*model.User{targetID: {ID: targetID}}, blocksEither: true}
 	svc := NewSocialService(repo)
 
-	_, err := svc.Follow(viewerID, targetID)
+	_, err := svc.Follow(context.Background(), viewerID, targetID)
 	if !errors.Is(err, ErrBlocked) {
 		t.Fatalf("expected ErrBlocked, got %v", err)
 	}
@@ -137,7 +153,7 @@ func TestBlockDeletesFollowsBothDirections(t *testing.T) {
 	repo := &fakeSocialRepo{users: map[uuid.UUID]*model.User{targetID: {ID: targetID}}}
 	svc := NewSocialService(repo)
 
-	_, err := svc.Block(viewerID, targetID)
+	_, err := svc.Block(context.Background(), viewerID, targetID)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -151,7 +167,7 @@ func TestReportValidatesUserSelfReport(t *testing.T) {
 	repo := &fakeSocialRepo{users: map[uuid.UUID]*model.User{userID: {ID: userID}}}
 	svc := NewSocialService(repo)
 
-	_, err := svc.Report(userID, dto.ReportRequest{TargetType: "user", TargetID: userID.String(), Reason: "spam"})
+	_, err := svc.Report(context.Background(), userID, dto.ReportRequest{TargetType: "user", TargetID: userID.String(), Reason: "spam"})
 	if !errors.Is(err, ErrSelfAction) {
 		t.Fatalf("expected ErrSelfAction, got %v", err)
 	}
@@ -163,7 +179,7 @@ func TestReportPostTargetMustExist(t *testing.T) {
 	repo := &fakeSocialRepo{users: map[uuid.UUID]*model.User{}}
 	svc := NewSocialService(repo)
 
-	_, err := svc.Report(reporterID, dto.ReportRequest{TargetType: "post", TargetID: postID.String(), Reason: "spam"})
+	_, err := svc.Report(context.Background(), reporterID, dto.ReportRequest{TargetType: "post", TargetID: postID.String(), Reason: "spam"})
 	if !errors.Is(err, ErrTargetNotFound) {
 		t.Fatalf("expected ErrTargetNotFound, got %v", err)
 	}

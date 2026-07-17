@@ -32,7 +32,7 @@ func (h *DMHandler) StartConversation(c *gin.Context) {
 		response.BadRequest(c, "Invalid target id")
 		return
 	}
-	res, err := h.service.StartConversation(userID, targetID)
+	res, err := h.service.StartConversation(c.Request.Context(), userID, targetID)
 	if handleDMError(c, err) {
 		return
 	}
@@ -46,7 +46,7 @@ func (h *DMHandler) ListConversations(c *gin.Context) {
 	}
 	pg := queryIntDM(c, "page", 1)
 	lm := queryIntDM(c, "limit", 20)
-	items, total, err := h.service.ListConversations(userID, pg, lm)
+	items, total, err := h.service.ListConversations(c.Request.Context(), userID, pg, lm)
 	if handleDMError(c, err) {
 		return
 	}
@@ -64,7 +64,7 @@ func (h *DMHandler) ListMessages(c *gin.Context) {
 	}
 	pg := queryIntDM(c, "page", 1)
 	lm := queryIntDM(c, "limit", 20)
-	items, total, err := h.service.ListMessages(userID, conversationID, pg, lm)
+	items, total, err := h.service.ListMessages(c.Request.Context(), userID, conversationID, pg, lm)
 	if handleDMError(c, err) {
 		return
 	}
@@ -85,7 +85,7 @@ func (h *DMHandler) SendMessage(c *gin.Context) {
 		response.BadRequest(c, "Invalid request body")
 		return
 	}
-	res, err := h.service.SendMessage(userID, conversationID, req)
+	res, err := h.service.SendMessage(c.Request.Context(), userID, conversationID, req)
 	if handleDMError(c, err) {
 		return
 	}
@@ -99,7 +99,7 @@ func (h *DMHandler) ListMessageRequests(c *gin.Context) {
 	}
 	pg := queryIntDM(c, "page", 1)
 	lm := queryIntDM(c, "limit", 20)
-	items, total, err := h.service.ListMessageRequests(userID, pg, lm)
+	items, total, err := h.service.ListMessageRequests(c.Request.Context(), userID, pg, lm)
 	if handleDMError(c, err) {
 		return
 	}
